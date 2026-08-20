@@ -5,9 +5,11 @@ import { loadViewer } from "@/lib/viewer";
 import { usd, pct } from "@/lib/market";
 import { privateCos } from "@/lib/data";
 import { marksFor, type Mark } from "@/lib/ledger";
+import { orPreviewMarks } from "@/lib/preview";
 import Logo from "@/components/dash/Logo";
 import PortfolioPanel from "@/components/dash/PortfolioPanel";
 import TradeTicket from "@/components/dash/TradeTicket";
+import StockView from "@/components/dash/StockView"; // make sure this path is correct
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,39 +53,57 @@ export default async function Stock({
 
   const v = await loadViewer();
   const q = v.quotes.find((x) => x.symbol === symbol);
+
   const priv = privateCos.find(
     (c) =>
       c.symbol === symbol ||
-      c.short === symbol ||
+      c.short.toUpperCase() === symbol ||
       c.name.toUpperCase() === symbol,
   );
+
   if (!q && !priv) notFound();
 
-  // Fetched once and passed down — this used to hit the store three times per
-  // render, which was free against an in-memory file and isn't against a
-  // database.
-  const marks = priv ? await marksFor(symbol) : [];
+  // Use the same preview marks system as the market page
+  const recorded = priv ? await marksFor(symbol).catch(() => []) : [];
+  const { marks, illustrative } = priv
+    ? orPreviewMarks(symbol, recorded)
+    : { marks: [], illustrative: false };
 
   const held = v.positions.find((p) => p.symbol === symbol);
 
-  // Public: live quote. Private: last recorded mark, or nothing.
   const mark = marks.length ? marks[marks.length - 1] : undefined;
+  const prevMark = marks.length > 1 ? marks[marks.length - 2] : undefined;
+
+  // Public: live quote. Private: last recorded (or preview) mark
   const rawPx = q
-    ? v.priceFor(symbol, held && held.quantity ? held.cost_basis / held.quantity : 0)
+    ? v.priceFor(
+        symbol,
+        held && held.quantity ? held.cost_basis / held.quantity : 0,
+      )
     : mark?.price;
 
-  // `priceFor` can return undefined on a cold quote cache. The old code fed
-  // that straight into `px * held.quantity` and rendered NaN across the panel.
   const px = Number.isFinite(rawPx as number) ? (rawPx as number) : null;
   const tradable = px !== null && px > 0;
 
+  // Series
   const series = q
     ? px !== null
       ? v.seriesFor(symbol, px)
       : []
     : steppedSeries(marks);
 
-  const up = (q?.change ?? 0) >= 0;
+  // Change (same logic as market page)
+  const changeAbs =
+    q?.changeAbs ??
+    (mark && prevMark ? mark.price - prevMark.price : null);
+
+  const changePct =
+    q?.change ??
+    (mark && prevMark && prevMark.price
+      ? ((mark.price - prevMark.price) / prevMark.price) * 100
+      : null);
+
+  const up = (changePct ?? 0) >= 0;
 
   return (
     <>
@@ -97,17 +117,24 @@ export default async function Stock({
           <h1 className="shead__t">{q?.name ?? priv!.name}</h1>
           <p className="mono shead__s">
             {symbol} · {q ? "public equity" : "private company · not listed"}
+            {illustrative && " · illustrative"}
           </p>
         </div>
-        {held && <span className="mono mcard__held">{held.quantity} sh held</span>}
+        {held && (
+          <span className="mono mcard__held">{held.quantity} sh held</span>
+        )}
       </header>
 
-      <PortfolioPanel
+      {/* Better chart + headline price */}
+      <StockView
+        symbol={symbol}
+        price={px}
+        changeAbs={changeAbs}
+        changePct={changePct}
         series={series}
-        total={px ?? 0}
-        cash={v.cash}
-        hasQuotes={series.length > 0}
-       unit="share"
+        kind={q ? "listed" : "private"}
+        markedAt={mark?.effective_at ?? null}
+        basis={mark?.basis ?? null}
       />
 
       <div className="split">
@@ -118,26 +145,22 @@ export default async function Stock({
           <dl className="dspecs">
             <div>
               <dt>{q ? "Last" : "Last mark"}</dt>
-              <dd className="mono">{px !== null ? usd(px) : "no mark recorded"}</dd>
+              <dd className="mono">
+                {px !== null ? usd(px) : "no mark recorded"}
+              </dd>
             </div>
             <div>
-              <dt>{q ? "Change today" : "Effective"}</dt>
+              <dt>{q ? "Change today" : "Since previous mark"}</dt>
               <dd
                 className={
-                  q ? (q.change == null ? "mono" : up ? "mono up" : "mono down") : "mono"
+                  changePct == null
+                    ? "mono"
+                    : up
+                      ? "mono up"
+                      : "mono down"
                 }
               >
-                {q
-                  ? q.change != null
-                    ? pct(q.change)
-                    : "—"
-                  : mark
-                    ? new Date(mark.effective_at).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })
-                    : "—"}
+                {changePct != null ? pct(changePct) : "—"}
               </dd>
             </div>
             <div>
@@ -176,7 +199,10 @@ export default async function Stock({
 
             <div>
               <dt>Data source</dt>
-              <dd className="mono">{q?.source ?? mark?.source ?? "—"}</dd>
+              <dd className="mono">
+                {q?.source ?? mark?.source ?? "—"}
+                {illustrative && " (illustrative)"}
+              </dd>
             </div>
           </dl>
         </section>
@@ -207,15 +233,20 @@ export default async function Stock({
               <p className="panel__note" style={{ marginTop: 12 }}>
                 {priv!.name} is a private company. This unit is not a listed
                 security and does not trade on an exchange. The price above is an
-                internal valuation mark dated{" "}
-                {new Date(mark!.effective_at).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                })}{" "}
-                on the basis of {mark!.basis} — not a market quote, and not a
-                price at which units can be redeemed on demand. Private holdings
-                are illiquid and can be marked down as well as up.
+                internal valuation mark
+                {mark
+                  ? ` dated ${new Date(mark.effective_at).toLocaleDateString(
+                      "en-US",
+                      {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      },
+                    )} on the basis of ${mark.basis}`
+                  : ""}{" "}
+                — not a market quote, and not a price at which units can be
+                redeemed on demand. Private holdings are illiquid and can be
+                marked down as well as up.
               </p>
             )}
           </div>
