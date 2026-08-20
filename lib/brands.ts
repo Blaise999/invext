@@ -28,6 +28,12 @@ export interface Brand {
   /** Some marks are dark-on-transparent and need inverting on a dark surface. */
   invert?: boolean;
   pad?: number;
+  /**
+   * Not listed on an exchange. Ticker-keyed logo services only carry listed
+   * issuers, so for these the chain skips straight to domain-based sources —
+   * otherwise every private vehicle burns two failed image loads first.
+   */
+  private?: boolean;
 }
 
 const commons = (file: string, w = 160) =>
@@ -79,18 +85,18 @@ export const BRANDS: Record<string, Brand> = {
   CAT:  { bg: "#1C1606", fg: "#E8C450", accent: "#FFCD11", mark: "CA", domain: "caterpillar.com" },
 
   /* private vehicles — no exchange mark to borrow, so these are all monogram */
-  NLNK: { bg: "#0F1418", fg: "#B9C6D1", accent: "#7E93A6", mark: "NL", domain: "neuralink.com" },
-  TBCO: { bg: "#151208", fg: "#D6BE7E", accent: "#A88C45", mark: "TB", domain: "boringcompany.com" },
-  OPAI: { bg: "#0C1614", fg: "#7EC9BC", accent: "#10A37F", mark: "OA", domain: "openai.com" },
-  ANTH: { bg: "#1A130C", fg: "#D6A277", accent: "#C1682B", mark: "AN", domain: "anthropic.com" },
-  ANDU: { bg: "#101317", fg: "#A6B4C4", accent: "#6E8296", mark: "AD", domain: "anduril.com" },
-  STRP: { bg: "#131029", fg: "#9E93E8", accent: "#635BFF", mark: "ST", domain: "stripe.com" },
-  DBRX: { bg: "#1C0D0B", fg: "#E88070", accent: "#FF3621", mark: "DB", domain: "databricks.com" },
-  SSIL: { bg: "#0E1219", fg: "#93A8C4", accent: "#5A7391", mark: "SS", domain: "ssi.inc" },
-  FIGR: { bg: "#150C14", fg: "#D68FC4", accent: "#A8459B", mark: "FG", domain: "figure.ai" },
-  HLON: { bg: "#0B1620", fg: "#6EB4D6", accent: "#2E8BB5", mark: "HL", domain: "helionenergy.com" },
-  CFSE: { bg: "#0F1409", fg: "#A8C96F", accent: "#6E9130", mark: "CF", domain: "cfs.energy" },
-  SIER: { bg: "#0C1220", fg: "#7E9AD6", accent: "#3A63B5", mark: "SI", domain: "sierraspace.com" },
+  NLNK: { bg: "#0F1418", fg: "#B9C6D1", accent: "#7E93A6", mark: "NL", domain: "neuralink.com", private: true },
+  TBCO: { bg: "#151208", fg: "#D6BE7E", accent: "#A88C45", mark: "TB", domain: "boringcompany.com", private: true },
+  OPAI: { bg: "#0C1614", fg: "#7EC9BC", accent: "#10A37F", mark: "OA", domain: "openai.com", private: true },
+  ANTH: { bg: "#1A130C", fg: "#D6A277", accent: "#C1682B", mark: "AN", domain: "anthropic.com", private: true },
+  ANDU: { bg: "#101317", fg: "#A6B4C4", accent: "#6E8296", mark: "AD", domain: "anduril.com", private: true },
+  STRP: { bg: "#131029", fg: "#9E93E8", accent: "#635BFF", mark: "ST", domain: "stripe.com", private: true },
+  DBRX: { bg: "#1C0D0B", fg: "#E88070", accent: "#FF3621", mark: "DB", domain: "databricks.com", private: true },
+  SSIL: { bg: "#0E1219", fg: "#93A8C4", accent: "#5A7391", mark: "SS", domain: "ssi.inc", private: true },
+  FIGR: { bg: "#150C14", fg: "#D68FC4", accent: "#A8459B", mark: "FG", domain: "figure.ai", private: true },
+  HLON: { bg: "#0B1620", fg: "#6EB4D6", accent: "#2E8BB5", mark: "HL", domain: "helionenergy.com", private: true },
+  CFSE: { bg: "#0F1409", fg: "#A8C96F", accent: "#6E9130", mark: "CF", domain: "cfs.energy", private: true },
+  SIER: { bg: "#0C1220", fg: "#7E9AD6", accent: "#3A63B5", mark: "SI", domain: "sierraspace.com", private: true },
 };
 
 export const brandOf = (symbol: string): Brand =>
@@ -118,28 +124,48 @@ export const brandOf = (symbol: string): Brand =>
  * miss, so a dead source degrades instead of breaking. Nothing here blocks
  * render: they're plain <img> loads.
  */
-export function logoSources(b: Brand, w = 160): string[] {
+export function logoSources(symbol: string, b: Brand, w = 160): string[] {
   const out: string[] = [];
+  const sym = symbol.toUpperCase();
+  // Ticker-image services key on the dotted class-share form, not the dashed
+  // one Yahoo uses: BRK.B, not BRK-B.
+  const dotted = sym.replace("-", ".");
 
-  // A verified Commons file is the best of the three where one exists.
+  // 1. A verified Commons file, where one exists — best quality, and it's the
+  //    company's own mark rather than a scraped favicon.
   if (b.file) out.push(commons(b.file, w));
 
-  if (b.domain) {
-    // Clearbit's logo endpoint needs no key and no account. It's the one that
-    // does the work for the other fifty names.
-    out.push(`https://logo.clearbit.com/${b.domain}?size=${w}`);
+  // 2. Ticker-keyed services. These are the ones that actually carry a listed
+  //    issuer's mark, and they don't care whether the company's website is
+  //    reachable from your host.
+  if (!b.private) {
+    out.push(`https://assets.parqet.com/logos/symbol/${dotted}?format=png&size=${w}`);
+    out.push(`https://financialmodelingprep.com/image-stock/${dotted}.png`);
+  }
 
-    // Logo.dev has better coverage of private companies, but it needs a
-    // publishable token. Set NEXT_PUBLIC_LOGODEV_TOKEN and it joins the chain;
-    // leave it unset and nothing here changes.
+  if (b.domain) {
+    // 3. Logo.dev — best coverage of PRIVATE companies, which have websites
+    //    but no ticker. Needs a publishable token; unset and it's skipped.
     const token = process.env.NEXT_PUBLIC_LOGODEV_TOKEN;
     if (token) {
       out.push(`https://img.logo.dev/${b.domain}?token=${token}&size=${w}&format=png`);
     }
+
+    // 4. Clearbit. Kept, but demoted: it is being wound down in favour of
+    //    logo.dev and now misses names it used to serve. It was the ONLY
+    //    source in the previous version, which is why half the board rendered
+    //    as grey monogram squares.
+    out.push(`https://logo.clearbit.com/${b.domain}?size=${w}`);
+
+    // 5. Favicon services. Lower fidelity, near-total coverage — a real mark
+    //    at 32px beats a two-letter monogram at any size.
+    out.push(`https://icons.duckduckgo.com/ip3/${b.domain}.ico`);
+    out.push(`https://www.google.com/s2/favicons?domain=${b.domain}&sz=128`);
   }
 
   return out;
 }
 
 /** Kept for callers that only want one URL. */
-export const logoUrl = (b: Brand, w = 160) => logoSources(b, w)[0] ?? null;
+export const logoUrl = (symbol: string, b: Brand, w = 160) =>
+  logoSources(symbol, b, w)[0] ?? null;

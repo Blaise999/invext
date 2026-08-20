@@ -3193,3 +3193,426 @@ a.pcard:hover { border-color: #3a3a46; transform: translateY(-2px); }
   0% { transform: scale(0.3); opacity: 0.4; }
   100% { transform: scale(1.4); opacity: 0; }
 }
+/* ============================================================
+   v2 — HEADER, GREETING, CHARTS, MOVERS, POSITION, PRIVATE BOOK
+   Appended last so these win over the earlier rules they replace.
+   ============================================================ */
+
+/* ---------------- top bar ----------------
+   The old bar packed brand, greeting, value and account into one row with
+   ~12px between each. The wordmark and the greeting ran together into a single
+   line of text. Now: brand hard left, everything else hard right, and the gap
+   between them is the layout doing the work. */
+
+.top__in {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  min-height: 68px;
+  padding: 0 var(--s3);
+}
+
+.top__brand { flex: 0 0 auto; padding: 8px 2px; }
+
+.top__right {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  margin-left: auto;
+}
+
+/* value gets its own vertical stack — figure over label, the way a brokerage
+   header reads — rather than sitting inline with everything else */
+.top__val {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+  text-decoration: none; color: inherit;
+  padding: 6px 12px;
+  border-radius: var(--r1);
+  border: 1px solid transparent;
+  transition: border-color var(--snap), background var(--snap);
+}
+.top__val:hover { border-color: var(--line); background: var(--surface-1); }
+.top__valK {
+  color: #55545a; font-size: 8.5px; letter-spacing: 0.18em;
+  text-transform: uppercase; line-height: 1;
+}
+.top__valRow { display: flex; align-items: baseline; gap: 9px; }
+.top__num { font-size: 19px; font-weight: 700; letter-spacing: -0.03em; }
+.top__d { font-size: 11px; font-weight: 700; }
+
+.top__act {
+  display: flex; align-items: center; gap: 12px;
+  padding-left: var(--s3);
+  border-left: 1px solid var(--line);
+}
+.top__who {
+  color: var(--dim); font-size: 10px;
+  max-width: 22ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ---------------- greeting, now on the page ---------------- */
+
+.welcome {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: var(--s3); flex-wrap: wrap;
+  padding-bottom: var(--s2);
+}
+.welcome__l { min-width: 0; }
+.welcome .hello {
+  margin: 0;
+  font-size: clamp(24px, 3.6vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+.welcome .hello em { font-style: normal; color: var(--amber); }
+.welcome__date {
+  margin: 8px 0 0;
+  color: #55545a; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+}
+.welcome__r { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.welcome__k { color: #55545a; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; }
+.welcome__v { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
+.welcome__pct { opacity: 0.75; font-size: 13px; font-weight: 600; }
+
+/* ---------------- chart panel ---------------- */
+
+.pp { margin: var(--s2) 0 0; }
+.pp__cap {
+  display: block;
+  color: #55545a; font-family: var(--mono);
+  font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.pp__chart { margin: 18px 0 0; }
+.pp__chart svg { height: 190px; }
+
+/* Scale labels sat flush against the right edge and collided with the line.
+   Plated and inset now. */
+.pp__scale span {
+  background: rgba(8, 8, 10, 0.72);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.pp__ranges { flex-wrap: wrap; }
+.pp__r { min-width: 48px; }
+
+@media (max-width: 880px) {
+  .pp__chart svg { height: 168px; }
+  .pp__r { min-width: 42px; font-size: 10.5px; }
+  .pp__cash { display: none; }
+}
+
+/* ---------------- stock page header ----------------
+   `.shead` had no styles at all — the logo and the name stacked as raw block
+   elements at the top of every instrument page. */
+
+.back {
+  display: inline-block;
+  color: var(--dim); text-decoration: none;
+  margin-bottom: var(--s2);
+}
+.back:hover { color: var(--amber); }
+
+.shead {
+  display: flex; align-items: center; gap: var(--s2);
+  padding-bottom: var(--s3);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: var(--s2);
+  flex-wrap: wrap;
+}
+.shead__id { min-width: 0; flex: 1 1 240px; }
+.shead__t {
+  margin: 0;
+  font-size: clamp(21px, 3vw, 29px);
+  font-weight: 800; letter-spacing: -0.035em; line-height: 1.15;
+}
+.shead__s { margin: 6px 0 0; color: var(--dim); font-size: 10.5px; }
+
+.shead__held {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r1);
+  padding: 10px 14px;
+}
+.shead__heldK { color: #55545a; font-size: 8.5px; letter-spacing: 0.16em; text-transform: uppercase; }
+.shead__heldV { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
+.shead__heldM { color: var(--dim); font-size: 10px; }
+
+/* ---------------- your position ---------------- */
+
+.pos {
+  margin: var(--s3) 0 0;
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  padding: var(--s2) var(--s3) var(--s3);
+}
+.pos__head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; margin-bottom: var(--s2);
+}
+.pos__h { margin: 0; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 800; }
+.pos__meta { color: var(--amber); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+
+.pos__grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 1px;
+  background: var(--line-soft);
+  border-radius: var(--r1);
+  overflow: hidden;
+}
+.pos__grid > div { background: var(--surface-1); padding: 13px 14px; }
+.pos__grid dt {
+  color: var(--dim); font-family: var(--mono);
+  font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
+}
+.pos__grid dd {
+  margin: 8px 0 0;
+  font-size: 17px; font-weight: 700; letter-spacing: -0.025em;
+}
+.pos__pct { font-size: 12px; font-weight: 600; opacity: 0.8; }
+
+/* ---------------- movers rail ---------------- */
+
+.movers { margin: 0 0 var(--s3); }
+.movers__head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; margin-bottom: 12px;
+}
+.movers__h { margin: 0; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 800; }
+.movers__meta { color: #55545a; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; }
+
+.movers__rail {
+  display: flex; gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 4px;
+  /* bleed to the pane edge on mobile so cards don't look clipped mid-gutter */
+  margin: 0 calc(var(--s2) * -1);
+  padding-left: var(--s2);
+  padding-right: var(--s2);
+}
+.movers__rail::-webkit-scrollbar { display: none; }
+
+.mcd {
+  flex: 0 0 auto;
+  width: 166px;
+  scroll-snap-align: start;
+  display: flex; flex-direction: column; gap: 9px;
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  padding: 13px;
+  text-decoration: none; color: inherit;
+  transition: border-color var(--snap), transform var(--snap);
+}
+.mcd:hover { border-color: #34343f; transform: translateY(-2px); }
+.mcd__top { display: flex; align-items: center; gap: 8px; }
+.mcd__sym { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; }
+.mcd__held {
+  margin-left: auto;
+  font-family: var(--mono); font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--amber); border: 1px solid var(--amber-dp); border-radius: 20px;
+  padding: 2px 6px;
+}
+.mcd .spark { width: 100%; height: 40px; margin: 0; }
+.mcd__foot { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.mcd__px { font-size: 13.5px; font-weight: 700; letter-spacing: -0.02em; }
+.mcd__ch { font-size: 11.5px; font-weight: 700; border-radius: 6px; padding: 2px 6px; }
+.mcd__ch.up { background: rgba(111, 191, 115, 0.12); }
+.mcd__ch.down { background: rgba(212, 97, 78, 0.12); }
+
+/* ---------------- private book cards ---------------- */
+
+.wgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: var(--s2);
+  margin-bottom: var(--s4);
+}
+
+.wc {
+  display: flex; flex-direction: column;
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  overflow: hidden;
+  transition: border-color var(--snap);
+}
+.wc:hover { border-color: #34343f; }
+.wc__link {
+  display: block; text-decoration: none; color: inherit;
+  padding: var(--s2) var(--s2) 0;
+}
+
+.wc__top { display: flex; align-items: center; gap: 12px; }
+.wc__id { min-width: 0; flex: 1; }
+.wc__name { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.2; }
+.wc__sym { margin: 5px 0 0; color: var(--dim); font-size: 9px; letter-spacing: 0.1em; }
+.wc__held {
+  flex: 0 0 auto;
+  color: var(--amber); border: 1px solid var(--amber-dp); border-radius: 20px;
+  padding: 3px 9px; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+}
+
+.wc__mark {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  margin: var(--s2) 0 0;
+}
+.wc__px { display: flex; align-items: baseline; gap: 7px; }
+.wc__last { font-size: 25px; font-weight: 700; letter-spacing: -0.035em; }
+.wc__last.is-illus { border-bottom: 1px dashed var(--amber-dp); }
+.wc__unit { color: #55545a; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; }
+.wc__ch { font-size: 12px; font-weight: 700; }
+.wc__chk { color: #55545a; font-weight: 400; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; }
+.wc__mark .spark { margin: 0; }
+
+.wc__what { margin: 12px 0 var(--s2); color: var(--dim); font-size: 13px; line-height: 1.5; }
+
+.wc__out {
+  margin-top: auto;
+  background: #0c0c10;
+  border-top: 1px solid var(--line);
+  padding: var(--s2);
+}
+.wc__outHead { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.wc__outK { color: var(--amber); font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; }
+.wc__outEst {
+  color: #55545a; font-size: 8.5px; letter-spacing: 0.12em; text-transform: uppercase;
+  border: 1px dashed #33333d; border-radius: 20px; padding: 2px 8px;
+}
+
+.wc__window {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  margin: 12px 0 var(--s2);
+}
+.wc__windowV { font-size: 21px; font-weight: 700; letter-spacing: -0.02em; }
+
+/* four-step confidence meter — a band, not a probability */
+.wc__conf { display: inline-flex; align-items: center; gap: 3px; }
+.wc__conf i {
+  width: 15px; height: 4px; border-radius: 2px;
+  background: var(--line); display: block;
+}
+.wc__conf i.on { background: var(--amber); }
+.wc__conf em {
+  font-style: normal; margin-left: 7px;
+  color: var(--dim); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
+}
+
+.wc__facts { margin: 0; display: grid; gap: 1px; }
+.wc__facts > div { padding: 9px 0; border-top: 1px solid var(--line-soft); }
+.wc__facts dt {
+  color: #55545a; font-family: var(--mono);
+  font-size: 8.5px; letter-spacing: 0.14em; text-transform: uppercase;
+}
+.wc__facts dd { margin: 5px 0 0; font-size: 12.5px; line-height: 1.5; color: #b6b4ae; }
+
+.wc__comps { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.wc__compsK { color: #55545a; font-size: 8.5px; letter-spacing: 0.14em; text-transform: uppercase; }
+.wc__comp {
+  border: 1px solid var(--line); border-radius: 6px;
+  padding: 3px 7px; font-size: 9.5px; color: var(--dim); letter-spacing: 0.06em;
+}
+
+.wc__foot {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; flex-wrap: wrap;
+  padding: 11px var(--s2);
+  border-top: 1px solid var(--line);
+  color: #46454a; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase;
+}
+
+/* ---------------- listing outlook on the stock page ---------------- */
+
+.outlook {
+  margin-top: var(--s3);
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  background: #0c0c10;
+  padding: var(--s2);
+}
+.outlook__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.outlook__est {
+  color: #55545a; font-size: 8.5px; letter-spacing: 0.12em; text-transform: uppercase;
+  border: 1px dashed #33333d; border-radius: 20px; padding: 2px 8px;
+}
+.outlook__window {
+  display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap;
+  margin: 12px 0 var(--s2);
+}
+.outlook__windowV { font-size: 26px; font-weight: 700; letter-spacing: -0.03em; color: var(--amber); }
+.outlook__disc { margin-top: var(--s2); padding-top: 12px; border-top: 1px solid var(--line-soft); }
+
+/* ---------------- activity ---------------- */
+
+.act__filters { margin-bottom: var(--s2); }
+
+.act__row { border-radius: var(--r1); }
+.act__link {
+  display: contents;
+  text-decoration: none; color: inherit;
+}
+.act__dot--adj em, .act__dot--buy em, .act__dot--sell em {
+  color: var(--dim); border-color: var(--line); background: var(--surface-2);
+}
+.act__amt--adj { color: var(--amber); }
+.act__status--rejected, .act__status--failed { color: var(--down); border-color: #4a2620; }
+.act__real { color: var(--dim); font-size: 9.5px; letter-spacing: 0.06em; }
+
+/* ---------------- shortcuts panel ---------------- */
+
+.quicklinks { display: grid; gap: 1px; }
+.quicklinks a {
+  display: block;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink); text-decoration: none;
+  font-size: 13.5px; font-weight: 600;
+}
+.quicklinks a:last-child { border-bottom: 0; }
+.quicklinks a:hover { color: var(--amber); }
+.quicklinks a::after { content: " →"; color: var(--dim); }
+
+/* ---------------- strip colour ---------------- */
+
+.strip__v.up { color: var(--up); }
+.strip__v.down { color: var(--down); }
+
+/* ---------------- responsive ---------------- */
+
+@media (max-width: 880px) {
+  .top__in { min-height: 60px; padding: 8px var(--s2); gap: var(--s2); }
+  /* email + sign-out drop on mobile — they live on the Account tab. The value
+     stays, because it's the reason to have a bar at all. */
+  .top__act { display: none; }
+  .top__val { padding: 4px 0; }
+  .top__num { font-size: 17px; }
+
+  .welcome { padding-bottom: var(--s1); }
+  .welcome__r { align-items: flex-start; }
+
+  .shead__held { padding: 8px 11px; }
+  .shead__heldV { font-size: 15px; }
+
+  .pos { padding: var(--s2); }
+  .pos__grid { grid-template-columns: repeat(2, 1fr); }
+  .pos__grid dd { font-size: 15px; }
+
+  .wgrid { grid-template-columns: 1fr; }
+  .mcd { width: 148px; }
+}
+
+@media (max-width: 420px) {
+  .pos__grid { grid-template-columns: 1fr 1fr; }
+  .welcome .hello { font-size: 23px; }
+}

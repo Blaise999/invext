@@ -1,6 +1,7 @@
 import { loadViewer } from "@/lib/viewer";
-import { PUBLIC_TICKERS } from "@/lib/market";
+import { PUBLIC_TICKERS, alpacaConfigured } from "@/lib/market";
 import { PRIVATE_LISTINGS } from "@/lib/private";
+import { LISTING_OUTLOOK } from "@/lib/listing";
 import MarketBoard from "@/components/dash/MarketBoard";
 import { marksFor } from "@/lib/ledger";
 import { orPreviewMarks } from "@/lib/preview";
@@ -9,16 +10,16 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Forty listed names and twelve private vehicles on one board.
- *
- * The old page rendered every symbol as a large card with a sparkline and a
- * spec list — fine for seven, unusable for fifty-two, and on a phone it was a
- * single column of chest-high cards you had to scroll for a minute to reach
- * the bottom of. It's a dense sortable list now, with the cards kept only for
- * the row you open.
+ * Forty listed names and twelve private vehicles on one board — a movers rail
+ * for the question people arrive with, then one dense sortable list.
  */
 export default async function Market() {
   const v = await loadViewer();
+
+  const qtyOf = (symbol: string) =>
+    v.positions
+      .filter((x) => x.symbol.toUpperCase() === symbol.toUpperCase())
+      .reduce((n, x) => n + x.quantity, 0);
 
   const privateRows = await Promise.all(
     PRIVATE_LISTINGS.map(async (p) => {
@@ -26,6 +27,7 @@ export default async function Market() {
       const { marks, illustrative } = orPreviewMarks(p.symbol, recorded);
       const last = marks[marks.length - 1];
       const prev = marks[marks.length - 2];
+      const qty = qtyOf(p.symbol);
       return {
         symbol: p.symbol,
         name: p.name,
@@ -35,23 +37,31 @@ export default async function Market() {
           last && prev ? ((last.price - prev.price) / prev.price) * 100 : null,
         markedAt: last?.effective_at ?? null,
         basis: last?.basis ?? null,
+        listing: LISTING_OUTLOOK[p.symbol]?.window ?? null,
         illustrative,
-        held: v.positions.some((x) => x.symbol === p.symbol),
+        held: qty > 0,
+        heldQty: qty,
       };
     }),
   );
 
-  const listed = v.quotes.map((q) => ({
-    symbol: q.symbol,
-    name: q.name,
-    price: q.price,
-    change: q.change,
-    series: q.series.slice(-40),
-    illustrative: q.source === "preview",
-    held: v.positions.some((x) => x.symbol === q.symbol),
-  }));
+  const listed = v.quotes.map((q) => {
+    const qty = qtyOf(q.symbol);
+    return {
+      symbol: q.symbol,
+      name: q.name,
+      price: q.price,
+      change: q.change,
+      changeAbs: q.changeAbs,
+      series: q.series.slice(-60),
+      illustrative: q.source === "preview",
+      held: qty > 0,
+      heldQty: qty,
+    };
+  });
 
   const resolved = v.quotes.filter((q) => q.price != null).length;
+  const live = v.quotes.filter((q) => q.source === "alpaca" || q.source === "finnhub").length;
 
   return (
     <>
@@ -64,7 +74,10 @@ export default async function Market() {
             recent recorded mark.
           </p>
         </div>
-        <span className="phead__meta num">{resolved}/{listed.length} quoted</span>
+        <span className="phead__meta num">
+          {resolved}/{listed.length} quoted
+          {alpacaConfigured() && live > 0 ? " · Alpaca" : ""}
+        </span>
       </div>
 
       <MarketBoard listed={listed} priv={privateRows} />

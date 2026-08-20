@@ -1,32 +1,55 @@
 import { NextResponse } from "next/server";
+import { placeOrder } from "@/lib/orders";
 
 export const runtime = "nodejs";
 
 /**
- * Order intake stub.
+ * Order intake.
  *
- * Returns 501 deliberately. Accepting an order without a broker-dealer behind it
- * would mean showing a customer a filled position that does not exist anywhere —
- * the same class of problem as an admin-writable balance.
+ * This used to return 501 unconditionally — "No broker-dealer is connected to
+ * this build" — which is the message every Buy button in the app produced,
+ * because the ticket posted here while the working implementation sat unused
+ * in lib/orders.ts. The ticket now calls that server action directly; this
+ * route exists for anything outside the browser session and delegates to the
+ * same code path, so the two can't diverge.
  *
- * TO WIRE UP: route to your executing broker's API (Alpaca, DriveWealth, Apex),
- * persist the order, and only write a ledger entry when the broker confirms a
- * fill with a quantity and price. Never on submit.
+ * What "executes" means here, stated plainly: nothing reaches an exchange, a
+ * broker-dealer or a clearing firm. A fill is a bookkeeping entry against a
+ * live quote re-fetched server-side. That is correct for a proof of concept
+ * and NOT correct for real customer money — wire an executing broker (Alpaca
+ * Trading API, DriveWealth, Apex) before a real dollar goes near it, and only
+ * write a ledger entry when the broker confirms a fill.
+ *
+ * Body:  { symbol, side: "buy"|"sell", mode?: "shares"|"dollars", size|shares|amount }
  */
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
-  console.info("[orders] intent received (not executed)", body);
+  const body = await req.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ ok: false, error: "Send a JSON body." }, { status: 400 });
+  }
 
-  return NextResponse.json(
-    {
-      error:
-        "Order not placed. No broker-dealer is connected to this build — see app/api/orders/route.ts to wire execution.",
-      received: {
-        symbol: body.symbol ?? null,
-        side: body.side ?? null,
-        amount: body.amount ?? null,
-      },
-    },
-    { status: 501 },
-  );
+  const symbol = String(body.symbol ?? "").trim().toUpperCase();
+  const side = body.side === "sell" ? "sell" : "buy";
+
+  // Accept the three shapes callers have historically sent rather than making
+  // an integration guess which one this build wants.
+  const mode: "shares" | "dollars" =
+    body.mode === "dollars" || body.amount != null ? "dollars" : "shares";
+  const size = Number(body.size ?? body.shares ?? body.amount ?? 0);
+
+  if (!symbol) {
+    return NextResponse.json({ ok: false, error: "Symbol is required." }, { status: 400 });
+  }
+  if (!Number.isFinite(size) || size <= 0) {
+    return NextResponse.json(
+      { ok: false, error: "Send a size greater than zero." },
+      { status: 400 },
+    );
+  }
+
+  const result = await placeOrder(symbol, side, mode, size);
+
+  // A refused order is a business outcome, not a server fault: 422, so a
+  // caller's error handling can tell "you can't afford this" from "we broke".
+  return NextResponse.json(result, { status: result.ok ? 200 : 422 });
 }

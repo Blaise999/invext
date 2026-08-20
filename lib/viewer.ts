@@ -183,6 +183,23 @@ export async function loadViewer() {
     return demo ? demoSeries(sym, costPerShare) : [];
   };
 
+  /** Minute bars for the 1D range, when the provider serves them. */
+  const intradayFor = (sym: string): number[] => {
+    const key = sym.toUpperCase();
+    return bySymbol.get(key)?.intraday ?? bySymbol.get(sym)?.intraday ?? [];
+  };
+
+  /**
+   * True when the chart shape for this symbol was shaped from the price rather
+   * than served as history. The stock page prints a line saying so — a live
+   * price with an illustrative shape is fine, an unlabelled one is not.
+   */
+  const derivedFor = (sym: string): boolean => {
+    const key = sym.toUpperCase();
+    const q = bySymbol.get(key) ?? bySymbol.get(sym);
+    return q?.seriesSource === "derived";
+  };
+
   const pnl = portfolioPnl({
     positions,
     transactions,
@@ -209,21 +226,45 @@ export async function loadViewer() {
   const total = pnl.total;
   const openPL = pnl.unrealised;
 
-  const seriesLens = positions
-    .map((p) => seriesFor(p.symbol, p.cost_basis / p.quantity).length)
-    .filter((n) => n > 1);
-  const span =
-    seriesLens.length === positions.length && seriesLens.length > 0
-      ? Math.min(...seriesLens)
-      : 0;
+  /**
+   * Portfolio series.
+   *
+   * The old rule was "every position must have a series or draw nothing",
+   * which meant one illiquid holding with no history blanked the chart for the
+   * entire account. Now the longest available series sets the span and any
+   * position without one is held flat at its current price across it — the
+   * total is still exactly right at the right-hand edge, which is the number
+   * anyone actually reads off this chart.
+   *
+   * With no positions at all it stays empty and the panel draws a flat line at
+   * cash. That is the honest picture of an account that hasn't traded.
+   */
+  const priced = positions.map((p) => {
+    const cps = p.quantity > 0 ? p.cost_basis / p.quantity : 0;
+    return {
+      qty: p.quantity,
+      series: seriesFor(p.symbol, cps).filter((n) => Number.isFinite(n)),
+      price: priceFor(p.symbol, cps),
+    };
+  });
+
+  const span = Math.min(
+    260,
+    Math.max(0, ...priced.map((p) => (p.series.length > 1 ? p.series.length : 0))),
+  );
 
   const portfolioSeries: number[] =
-    span > 1
+    span > 1 && positions.length > 0
       ? Array.from({ length: span }, (_, i) =>
-          positions.reduce((sum, p) => {
-            const ser = seriesFor(p.symbol, p.cost_basis / p.quantity);
-            const px = ser[ser.length - span + i];
-            return sum + (Number.isFinite(px) ? px * p.quantity : 0);
+          priced.reduce((sum, p) => {
+            if (p.series.length > 1) {
+              // Right-align: the last point of every series is today.
+              const idx = p.series.length - span + i;
+              const px = idx >= 0 ? p.series[idx] : p.series[0];
+              return sum + (Number.isFinite(px) ? px * p.qty : 0);
+            }
+            // No history for this one — hold it flat at its mark.
+            return sum + (p.price != null ? p.price * p.qty : 0);
           }, cash),
         )
       : [];
@@ -255,6 +296,8 @@ export async function loadViewer() {
     allocation,
     priceFor,
     seriesFor,
+    intradayFor,
+    derivedFor,
     pnl,
     markPrices,
   };

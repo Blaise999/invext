@@ -10,9 +10,11 @@ export interface ListedRow {
   name: string;
   price: number | null;
   change: number | null;
+  changeAbs: number | null;
   series: number[];
   illustrative: boolean;
   held: boolean;
+  heldQty: number;
 }
 
 export interface PrivateRow {
@@ -25,6 +27,9 @@ export interface PrivateRow {
   basis: string | null;
   illustrative: boolean;
   held: boolean;
+  heldQty: number;
+  /** Consensus window for a public listing. Never a promise. */
+  listing?: string | null;
 }
 
 const usd = (n: number) =>
@@ -34,12 +39,19 @@ type Tab = "all" | "listed" | "private" | "held";
 type Sort = "name" | "gain" | "loss" | "price";
 
 /**
- * One scrollable list rather than fifty cards.
+ * The market board, leaning on what Robinhood actually gets right:
  *
- * Search is the primary control at this size — with fifty-two names, scanning
- * is slower than typing three letters. Sorting is by movement rather than
- * alphabetical by default on the gainers/losers views, because that's the
- * question people are actually asking the list.
+ *  - MOVERS FIRST. A horizontally-scrolled strip of the day's biggest moves at
+ *    the top, each a real card with a mark and a sparkline. It answers the
+ *    question people open this screen with before they've typed anything.
+ *  - THEN ONE DENSE LIST. Not fifty chest-high cards — at fifty-two names that
+ *    is a minute of scrolling on a phone. Logo, ticker, name, price, tinted
+ *    change pill, and a sparkline where the width allows.
+ *  - SEARCH IS THE PRIMARY CONTROL at this size. Typing three letters beats
+ *    scanning, so it sits above everything and stays put.
+ *
+ * What is NOT copied: confetti, streaks, "most popular" ranking. Those push
+ * volume rather than help someone find an instrument.
  */
 export default function MarketBoard({
   listed,
@@ -52,14 +64,32 @@ export default function MarketBoard({
   const [sort, setSort] = useState<Sort>("name");
   const [q, setQ] = useState("");
 
-  const rows = useMemo(() => {
-    const all = [
-      ...listed.map((r) => ({ ...r, kind: "listed" as const })),
-      ...priv.map((r) => ({ ...r, series: [] as number[], kind: "private" as const })),
-    ];
+  const all = useMemo(
+    () => [
+      ...listed.map((r) => ({ ...r, kind: "listed" as const, what: "" })),
+      ...priv.map((r) => ({
+        ...r,
+        series: [] as number[],
+        changeAbs: null as number | null,
+        kind: "private" as const,
+      })),
+    ],
+    [listed, priv],
+  );
 
+  /** Biggest absolute movers among names that actually quoted. */
+  const movers = useMemo(
+    () =>
+      listed
+        .filter((r) => r.change != null && r.price != null)
+        .sort((a, b) => Math.abs(b.change!) - Math.abs(a.change!))
+        .slice(0, 10),
+    [listed],
+  );
+
+  const rows = useMemo(() => {
     const term = q.trim().toLowerCase();
-    let out = all.filter((r) => {
+    const out = all.filter((r) => {
       if (tab === "listed" && r.kind !== "listed") return false;
       if (tab === "private" && r.kind !== "private") return false;
       if (tab === "held" && !r.held) return false;
@@ -70,15 +100,15 @@ export default function MarketBoard({
       );
     });
 
-    out = [...out].sort((a, b) => {
+    return [...out].sort((a, b) => {
       if (sort === "gain") return (b.change ?? -Infinity) - (a.change ?? -Infinity);
       if (sort === "loss") return (a.change ?? Infinity) - (b.change ?? Infinity);
       if (sort === "price") return (b.price ?? -Infinity) - (a.price ?? -Infinity);
       return a.symbol.localeCompare(b.symbol);
     });
+  }, [all, tab, sort, q]);
 
-    return out;
-  }, [listed, priv, tab, sort, q]);
+  const showMovers = !q.trim() && tab !== "private" && movers.length > 2;
 
   return (
     <>
@@ -90,7 +120,7 @@ export default function MarketBoard({
           </svg>
           <input
             className="search__i"
-            placeholder="Search 52 names"
+            placeholder={`Search ${all.length} names`}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             aria-label="Search the market"
@@ -139,26 +169,63 @@ export default function MarketBoard({
         </div>
       </div>
 
+      {showMovers && (
+        <section className="movers">
+          <header className="movers__head">
+            <h2 className="movers__h">Today&rsquo;s movers</h2>
+            <span className="mono movers__meta">by absolute move</span>
+          </header>
+          <div className="movers__rail">
+            {movers.map((m) => {
+              const up = (m.change ?? 0) >= 0;
+              return (
+                <Link className="mcd" key={m.symbol} href={`/dashboard/stock/${m.symbol}`}>
+                  <div className="mcd__top">
+                    <Logo symbol={m.symbol} size={30} />
+                    <span className="mcd__sym">{m.symbol}</span>
+                    {m.held && <span className="mcd__held">Held</span>}
+                  </div>
+                  <Sparkline series={m.series.slice(-40)} up={up} w={150} h={40} />
+                  <div className="mcd__foot">
+                    <span className="mcd__px num">
+                      {m.price != null ? usd(m.price) : "—"}
+                    </span>
+                    <span className={up ? "mcd__ch num up" : "mcd__ch num down"}>
+                      {up ? "+" : ""}
+                      {m.change!.toFixed(2)}%
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       <ul className="board">
         {rows.map((r) => {
           const up = (r.change ?? 0) >= 0;
           return (
             <li key={r.symbol}>
               <Link className="brow" href={`/dashboard/stock/${r.symbol}`}>
-                <Logo symbol={r.symbol} size={36} />
+                <Logo symbol={r.symbol} size={38} />
 
                 <span className="brow__id">
                   <span className="brow__sym">
                     {r.symbol}
                     {r.kind === "private" && <span className="brow__tag">SPV</span>}
-                    {r.held && <span className="brow__tag brow__tag--held">Held</span>}
+                    {r.held && (
+                      <span className="brow__tag brow__tag--held">
+                        {r.heldQty > 0 ? `${trim(r.heldQty)} sh` : "Held"}
+                      </span>
+                    )}
                   </span>
                   <span className="brow__name">{r.name}</span>
                 </span>
 
                 {r.kind === "listed" && r.series.length > 1 && (
                   <span className="brow__spark" aria-hidden="true">
-                    <Sparkline series={r.series} up={up} w={68} h={26} />
+                    <Sparkline series={r.series} up={up} w={74} h={28} />
                   </span>
                 )}
 
@@ -166,7 +233,15 @@ export default function MarketBoard({
                   <span className={r.illustrative ? "brow__last num is-illus" : "brow__last num"}>
                     {r.price != null ? usd(r.price) : "—"}
                   </span>
-                  <span className={r.change == null ? "brow__ch num" : up ? "brow__ch num up" : "brow__ch num down"}>
+                  <span
+                    className={
+                      r.change == null
+                        ? "brow__ch num"
+                        : up
+                          ? "brow__ch num up"
+                          : "brow__ch num down"
+                    }
+                  >
                     {r.change != null
                       ? `${up ? "+" : ""}${r.change.toFixed(2)}%`
                       : r.kind === "private"
@@ -188,4 +263,9 @@ export default function MarketBoard({
       </ul>
     </>
   );
+}
+
+/** 4 → "4", 4.5 → "4.5", 4.123456 → "4.1235". Share counts are fractional here. */
+function trim(n: number) {
+  return Number.isInteger(n) ? String(n) : n.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
 }

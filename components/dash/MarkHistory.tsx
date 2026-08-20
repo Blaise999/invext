@@ -1,4 +1,10 @@
-import type { PrivateQuote } from "@/lib/private";
+export interface MarkRow {
+  id: string;
+  price: number;
+  effective_at: number;
+  basis: string;
+  source: string;
+}
 
 const usd = (n: number) =>
   n.toLocaleString("en-US", { style: "currency", currency: "USD" });
@@ -18,26 +24,32 @@ const on = (t: number) =>
  * shape of the thing obvious: three or four marks over four years, not a price
  * that moves. That's what holding a private position is actually like.
  */
-export default function MarkHistory({ quote }: { quote: PrivateQuote }) {
+export default function MarkHistory({
+  symbol,
+  marks,
+}: {
+  symbol: string;
+  marks: MarkRow[];
+}) {
   return (
     <div className="panel">
       <div className="panel__head">
         <h2 className="panel__h">Valuation marks</h2>
-        <span className="mono panel__meta">{quote.marks.length} recorded</span>
+        <span className="mono panel__meta">{marks.length} recorded</span>
       </div>
 
-      {quote.marks.length === 0 ? (
+      {marks.length === 0 ? (
         <div className="blank">
           <p className="blank__lead">No mark recorded.</p>
           <p className="blank__body">
-            Nothing has been recorded for {quote.symbol}, so there is no value to
+            Nothing has been recorded for {symbol}, so there is no value to
             show and nothing to transact at. Marks are entered in the back office
             with a date, a basis and a source.
           </p>
         </div>
       ) : (
         <ol className="marks">
-          {[...quote.marks].reverse().map((m, i) => (
+          {[...marks].reverse().map((m, i) => (
             <li className={i === 0 ? "marks__r is-current" : "marks__r"} key={m.id}>
               <div className="marks__l">
                 <span className="mono marks__px">{usd(m.price)}</span>

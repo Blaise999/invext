@@ -2,6 +2,22 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { placeOrder } from "@/lib/orders";
+
+/**
+ * WHY THIS NO LONGER POSTS TO /api/orders
+ *
+ * It used to `fetch("/api/orders")`, which was a stub that returned 501 with
+ * the text "Order not placed. No broker-dealer is connected to this build."
+ * Every Buy in the app hit that wall — while `placeOrder` in lib/orders.ts,
+ * which does the real work (re-fetches the quote server-side, checks buying
+ * power, writes the position and the ledger row in one locked transaction),
+ * sat there unused.
+ *
+ * The ticket now calls that server action directly. The client still sends
+ * only an intent — symbol, side, mode, size. It never sends a price. The
+ * server re-derives every number, which is the whole point.
+ */
 
 const usd = (n: number) =>
   n.toLocaleString("en-US", {
@@ -30,6 +46,12 @@ export default function TradeTicket({
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState<"buy" | "sell" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** What the server actually filled — not what was typed into the box. */
+  const [fill, setFilled] = useState<{
+    quantity: number;
+    price: number;
+    notional: number;
+  } | null>(null);
 
   const n = Number(raw) || 0;
 
@@ -50,31 +72,22 @@ export default function TradeTicket({
     setError(null);
 
     try {
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          symbol,
-          side,
-          shares: shares.toFixed(6),
-          limit: null,
-        }),
-      });
-      const data = await res.json();
+      const res = await placeOrder(symbol, side, mode, n);
 
-      if (data.ok) {
+      if (res.ok) {
+        setFilled(res.filled);
         setSuccess(side);
         setRaw("");
-        // short celebration then refresh
-        setTimeout(() => {
-          setSuccess(null);
-          router.refresh();
-        }, 2200);
+        // Refresh straight away so cash and holdings are correct behind the
+        // overlay, then clear it. The old version waited 2.2s before even
+        // asking for fresh data, so dismissing early showed stale numbers.
+        router.refresh();
+        setTimeout(() => setSuccess(null), 2400);
       } else {
-        setError(data.error ?? "Order could not be placed");
+        setError(res.error);
       }
     } catch {
-      setError("Connection lost. Please try again.");
+      setError("Couldn't reach the order desk. Nothing was placed — try again.");
     } finally {
       setBusy(false);
     }
@@ -109,9 +122,11 @@ export default function TradeTicket({
             {success === "buy" ? "Bought" : "Sold"} {symbol}
           </p>
           <p className="tkt__celebrate-sub">
-            {mode === "shares"
-              ? `${shares.toFixed(4)} shares`
-              : usd(notional)}
+            {fill
+              ? `${fill.quantity.toFixed(4)} sh @ ${usd(fill.price)} · ${usd(fill.notional)}`
+              : mode === "shares"
+                ? `${shares.toFixed(4)} shares`
+                : usd(notional)}
           </p>
         </div>
       )}
