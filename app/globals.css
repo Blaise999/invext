@@ -4655,3 +4655,198 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
   .poster__a, .poster__b { animation: none; }
 }
+
+/* ============================================================================
+   MOBILE HERO — BOTTOM-UP BLACK, ALL-CAPS WHITE, NEON ACCENT
+   ----------------------------------------------------------------------------
+   The desktop hero reads against amber on a dark render. On a phone the seq-m
+   frames are lighter and cooler, so amber-on-render lost contrast and the type
+   sat in the picture rather than on top of it.
+
+   Direction, as specified: a bottom-up black gradient carrying the copy, a bold
+   all-caps white headline, and a single neon yellow-green accent. The accent is
+   scoped to the mobile breakpoint on purpose — two accent colours across one
+   site is a brand problem, but two *contexts* with one accent each is a
+   legible system.
+   ========================================================================= */
+
+@media (max-width: 820px) {
+  :root { --neon: #cbff2e; --neon-dp: #a8d600; }
+
+  /* Bottom-up black. Steeper and taller than the desktop scrim: the copy block
+     is bigger relative to the screen, so it needs more runway to sit on. */
+  .seq__stage::after {
+    background:
+      linear-gradient(
+        to top,
+        rgba(0, 0, 0, 0.97) 0%,
+        rgba(0, 0, 0, 0.92) 26%,
+        rgba(0, 0, 0, 0.68) 48%,
+        rgba(0, 0, 0, 0.28) 68%,
+        rgba(0, 0, 0, 0) 86%
+      );
+  }
+
+  .plate__h {
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.02em;
+    line-height: 0.94;
+    font-size: clamp(30px, 8.8vw, 46px);
+    text-wrap: balance;
+  }
+
+  /* The emphasised line stays in the display serif on desktop; here it drops to
+     the same all-caps weight and takes the accent instead, because an italic
+     serif at this size against a photograph is the first thing to go mushy. */
+  .plate__em {
+    font-family: var(--sans);
+    font-style: normal;
+    font-weight: 700;
+    color: var(--neon);
+  }
+
+  .plate__eyebrow { color: var(--neon); letter-spacing: 0.24em; font-size: 10px; }
+  .plate__no { color: rgba(255, 255, 255, 0.5); }
+  .plate__rule { background: var(--neon); opacity: 0.8; }
+
+  .plate__lede { color: rgba(255, 255, 255, 0.78); }
+
+  .plate__readout { border-top-color: rgba(255, 255, 255, 0.18); }
+  .plate__readout dt { color: var(--neon); }
+  .plate__readout dd { color: rgba(255, 255, 255, 0.62); }
+
+  /* Buttons follow the accent. The solid one takes black type on neon, which is
+     the highest-contrast pairing available on this palette. */
+  .hero .btn { border-color: rgba(255, 255, 255, 0.32); color: #fff; }
+  .hero .btn--solid {
+    background: var(--neon);
+    border-color: var(--neon);
+    color: #0b0b0d;
+    font-weight: 700;
+  }
+
+  .tp__seg > i { background: var(--neon); }
+  .tp__seg.is-on > span { color: var(--neon); }
+  .ap__cut { background: linear-gradient(90deg, transparent, var(--neon), transparent); }
+  .wordmark::before { border-color: var(--neon); }
+  .wordmark span { color: var(--neon); }
+}
+
+/* ============================================================================
+   REVEAL — scroll response below the fold on mobile
+   ========================================================================= */
+
+.rv { transition: opacity 620ms cubic-bezier(0.16, 1, 0.3, 1), transform 620ms cubic-bezier(0.16, 1, 0.3, 1), clip-path 720ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+@media (max-width: 820px) {
+  .rv--up { opacity: 0; transform: translate3d(0, 34px, 0); }
+  .rv--wipe { clip-path: inset(0 0 100% 0); }
+  .rv.is-in { opacity: 1; transform: none; clip-path: inset(0 0 0 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rv { transition: none; opacity: 1; transform: none; clip-path: none; }
+}
+
+/* ============================================================================
+   MARKET BOARD — the listed rows
+   ----------------------------------------------------------------------------
+   Same information, given a surface. A plain <li> per security reads as a data
+   dump; what a trading screen wants is for the row itself to carry the move, so
+   the eye can scan performance without reading a single number.
+
+   The device: each row gets a hairline edge tinted by direction and a fill that
+   lights on hover, plus a gradient under the sparkline so an up day has visual
+   mass rather than just a line with a plus sign next to it.
+   ========================================================================= */
+
+.board { display: grid; gap: 6px; }
+
+.brow {
+  position: relative;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 16px 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.022), rgba(255, 255, 255, 0)) ,
+    var(--surface-1);
+  text-decoration: none;
+  color: inherit;
+  overflow: hidden;
+  transition: border-color var(--snap), transform var(--snap), background var(--snap);
+}
+
+/* Direction bar. Four pixels at the leading edge, coloured by the day's move —
+   the fastest possible read on a long list. */
+.brow::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--line);
+  transition: background var(--snap);
+}
+.brow:has(.up)::before { background: var(--up); }
+.brow:has(.down)::before { background: var(--down); }
+
+.brow:hover {
+  transform: translateY(-1px);
+  border-color: #33333f;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0)),
+    var(--surface-2);
+}
+
+.brow__id { display: grid; gap: 3px; min-width: 0; }
+.brow__sym { display: flex; align-items: center; gap: 7px; font-weight: 650; font-size: 14px; letter-spacing: -0.01em; }
+.brow__name {
+  color: var(--dim);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.brow__tag {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 2px 5px;
+}
+.brow__tag--held { color: var(--amber); border-color: rgba(232, 163, 61, 0.4); }
+
+.brow__spark { opacity: 0.85; transition: opacity var(--snap); }
+.brow:hover .brow__spark { opacity: 1; }
+
+.brow__px { display: grid; gap: 3px; justify-items: end; }
+.brow__last { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+.brow__ch { font-size: 11.5px; }
+.brow__last.is-illus { color: var(--dim); }
+
+/* Change readout as a pill rather than loose text — it's the one value people
+   compare across rows, so it gets an edge to compare against. */
+.brow__ch.up,
+.brow__ch.down {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.brow__ch.up { background: rgba(111, 191, 115, 0.13); }
+.brow__ch.down { background: rgba(212, 97, 78, 0.13); }
+
+@media (max-width: 640px) {
+  .brow { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 11px; padding: 12px 12px 12px 11px; }
+  .brow__spark { display: none; }
+  .brow__name { font-size: 11px; }
+}

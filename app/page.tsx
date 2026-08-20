@@ -1,4 +1,5 @@
 import Hero from "@/components/Hero";
+import Reveal from "@/components/Reveal";
 import Ticker from "@/components/Ticker";
 import PrivateList from "@/components/PrivateList";
 import Faq from "@/components/Faq";
@@ -77,7 +78,7 @@ export default async function Page() {
       <Ticker quotes={quotes} />
 
       {/* ═══════════ INTELLIGENCE ═══════════ */}
-      <section className="zone" id="intelligence">
+      <Reveal><section className="zone" id="intelligence">
         <header className="zone__head">
           <p className="mono eyebrow">Intelligence</p>
           <h2 className="zone__h">
@@ -93,9 +94,10 @@ export default async function Page() {
         </header>
 
         <NewsRoom items={stories} />
-      </section>
+      </section></Reveal>
 
       {/* ═══════════ LISTED MARKET ═══════════ */}
+      <Reveal>
       <section className="zone zone--alt" id="market">
         <div className="zone__in">
           <header className="zone__head zone__head--split">
@@ -160,9 +162,11 @@ export default async function Page() {
             Nothing here is a recommendation to buy.
           </p>
         </div>
-      </section>
+      </section></Reveal>
+
 
       {/* ═══════════ PRIVATE — TREATY ═══════════ */}
+      <Reveal>
       <section className="zone" id="private">
         <header className="zone__head">
           <p className="mono eyebrow">Private</p>
@@ -190,9 +194,11 @@ export default async function Page() {
               : "Names marked as planned coverage are not yet available. Starlink, Grok and X are divisions of SPCX and have no separate ticker."}
           </p>
         </div>
-      </section>
+      </section></Reveal>
+
 
       {/* ═══════════ IMAGERY ═══════════ */}
+      <Reveal>
       <section className="zone zone--alt" id="media">
         <div className="zone__in">
           <header className="zone__head zone__head--split">
@@ -220,9 +226,11 @@ export default async function Page() {
 
           <VideoWall clips={clips} />
         </div>
-      </section>
+      </section></Reveal>
+
 
       {/* ═══════════ LEADERSHIP ═══════════ */}
+      <Reveal>
       <section className="zone" id="who">
         <header className="zone__head">
           <p className="mono eyebrow">Who runs what</p>
@@ -236,9 +244,11 @@ export default async function Page() {
           </p>
         </header>
         <Leadership />
-      </section>
+      </section></Reveal>
+
 
       {/* ═══════════ TIMELINE ═══════════ */}
+      <Reveal>
       <section className="zone zone--alt" id="timeline">
         <div className="zone__in">
           <header className="zone__head">
@@ -256,9 +266,11 @@ export default async function Page() {
           </header>
           <Timeline />
         </div>
-      </section>
+      </section></Reveal>
+
 
       {/* ═══════════ THE ARGUMENT ═══════════ */}
+      <Reveal>
       <section className="zone" id="argument">
         <header className="zone__head">
           <p className="mono eyebrow">The argument</p>
@@ -279,9 +291,11 @@ export default async function Page() {
           paraphrased from published notes — read the originals before acting on
           any of it.
         </p>
-      </section>
+      </section></Reveal>
+
 
       {/* ═══════════ FAQ ═══════════ */}
+      <Reveal>
       <section className="zone zone--alt" id="questions">
         <div className="zone__in">
           <header className="zone__head">
@@ -290,7 +304,8 @@ export default async function Page() {
           </header>
           <Faq items={faqs} />
         </div>
-      </section>
+      </section></Reveal>
+
 
       {/* ═══════════ CTA ═══════════ */}
       <section className="cta" id="access">

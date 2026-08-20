@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { currentUser } from "./auth";
 import {
@@ -111,7 +112,14 @@ function asTransactions(
   });
 }
 
-export async function loadViewer() {
+/**
+ * Wrapped in React `cache` so it is deduped for the lifetime of one request.
+ *
+ * Eight routes call this, and the dashboard layout calls it as well — so every
+ * navigation was resolving identity, positions, transactions, sessions, cash
+ * and a full quote sweep twice over. Same inputs, same request, one call now.
+ */
+export const loadViewer = cache(async function loadViewer() {
   const explicitDemo = await isDemo();
   const real = explicitDemo ? null : await currentUser();
   const demo = explicitDemo || (!real && demoAllowed());
@@ -301,4 +309,4 @@ export async function loadViewer() {
     pnl,
     markPrices,
   };
-}
+});

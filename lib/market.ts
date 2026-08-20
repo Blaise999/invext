@@ -135,10 +135,25 @@ type Partial_ = Omit<Quote, "symbol" | "name" | "short">;
 const numeric = (n: unknown): n is number =>
   typeof n === "number" && Number.isFinite(n);
 
+/**
+ * Every provider call is on a hard timeout.
+ *
+ * fetchOne walks five providers in order and takes the first that answers. With
+ * no deadline, one provider that accepts the connection and then stalls holds
+ * the whole chain — and the chain runs per symbol, so a single slow endpoint
+ * turned into tens of seconds of blocked render. That was most of why the
+ * dashboard felt like it hung on every click.
+ *
+ * 2.5s is generous for a quote endpoint and short enough that walking all five
+ * still comes in under a page's patience budget.
+ */
+const PROVIDER_TIMEOUT_MS = 2500;
+
 async function tryFetch(url: string, init?: RequestInit) {
   const res = await fetch(url, {
     headers: { "User-Agent": UA, Accept: "application/json" },
     next: { revalidate: 60 },
+    signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
     ...init,
   });
   if (!res.ok) throw new Error(`${res.status}`);
@@ -488,7 +503,64 @@ async function inBatches<T, R>(
   return out;
 }
 
+/* ------------------------------------------------------- quote memo ------ */
+
+/**
+ * Process-level quote cache with stale-while-revalidate.
+ *
+ * `next: { revalidate }` on the individual fetches doesn't help here: the
+ * dashboard layout is force-dynamic, so every navigation re-enters this
+ * function, and the per-symbol fallback chain runs again from the top whenever
+ * the primary provider is unconfigured or down.
+ *
+ * Three things this gives us:
+ *   FRESH   — inside the TTL, return the last result with no network at all.
+ *   STALE   — past the TTL, return the old quotes immediately and refresh in
+ *             the background. A quote that is ninety seconds old is worth far
+ *             more to the page than a spinner.
+ *   SHARED  — one in-flight promise. The layout and the page both call this
+ *             during the same render; without it that is two full provider
+ *             sweeps for one navigation.
+ */
+const QUOTE_TTL_MS = 60_000;
+
+let quoteCache: { at: number; data: Quote[] } | null = null;
+let quoteInFlight: Promise<Quote[]> | null = null;
+
 export async function getQuotes(): Promise<Quote[]> {
+  const now = Date.now();
+
+  if (quoteCache && now - quoteCache.at < QUOTE_TTL_MS) return quoteCache.data;
+
+  if (!quoteInFlight) {
+    quoteInFlight = fetchQuotes()
+      .then((data) => {
+        // Never let an all-blank sweep evict a good cache — a transient
+        // provider outage shouldn't wipe prices off the dashboard.
+        if (data.some((q) => q.price != null) || !quoteCache) {
+          quoteCache = { at: Date.now(), data };
+        }
+        return quoteCache!.data;
+      })
+      .catch((e) => {
+        if (quoteCache) return quoteCache.data;
+        throw e;
+      })
+      .finally(() => {
+        quoteInFlight = null;
+      });
+  }
+
+  // Stale copy on hand: hand it back now, let the refresh land for next time.
+  if (quoteCache) {
+    void quoteInFlight;
+    return quoteCache.data;
+  }
+
+  return quoteInFlight;
+}
+
+async function fetchQuotes(): Promise<Quote[]> {
   const failures: string[] = [];
   const symbols = PUBLIC_TICKERS.map((t) => t.symbol);
 
