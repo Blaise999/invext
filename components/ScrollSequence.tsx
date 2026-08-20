@@ -211,7 +211,9 @@ export default function ScrollSequence({
       height: picked.height,
       // Decoded RGBA is the real cost, not the download. Sample evenly to this
       // many and scrub the sample; the blend between neighbours covers the gap.
-      budget: Math.min(picked.frameCount, narrow ? 80 : 150),
+      // Placeholder — the real budget is derived from decoded frame size below,
+      // because a frame count alone says nothing about memory.
+      budget: picked.frameCount,
     });
     setPhase("pending");
   }, [narrow, desktop, mobile]);
@@ -231,11 +233,45 @@ export default function ScrollSequence({
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const cover = Math.max((vw * dpr) / width, (vh * dpr) / height);
-    const decodeW = Math.max(1, Math.round(width * Math.min(cover, 1)));
+
+    /**
+     * Cap the long edge as well as the cover scale.
+     *
+     * A 1600x900 master decoded at native costs 5.8 MB of RGBA per frame. Over
+     * any useful number of frames that is hundreds of megabytes, and a phone
+     * kills the tab long before it becomes a rendering problem. Painting a
+     * hero at 1280 (or 720 on a phone) is indistinguishable atthis size and costs
+     * a third as much.
+     */
+    const longCap = narrow ? 720 : 1280;
+    const capScale = Math.min(1, longCap / Math.max(width, height));
+    const scale = Math.min(cover, 1, capScale);
+    const decodeW = Math.max(1, Math.round(width * scale));
     const decodeH = Math.max(1, Math.round((decodeW / width) * height));
 
-    // Even sample across the whole sequence, capped by the memory budget.
-    const take = Math.min(budget, frameCount);
+    /**
+     * Budget by BYTES, not by frame count.
+     *
+     * The previous rule — 150 desktop, 80 mobile — is meaningless without the
+     * frame size. At 1600x900 those numbers are 864 MB and 461 MB. Deriving the
+     * count from a memory ceiling and the actual decoded size means the same
+     * code is safe whether the sequence is 96 frames or 1000.
+     *
+     * The floor of 24 exists because below that the scrub reads as a slideshow;
+     * if even 24 frames exceed the ceiling the sequence is simply too big and
+     * needs thinning on disk (see tools/thin-frames.mjs).
+     */
+    const perFrame = decodeW * decodeH * 4;
+    const ceiling = narrow ? 96 * 1024 * 1024 : 224 * 1024 * 1024;
+    const affordable = Math.max(24, Math.floor(ceiling / perFrame));
+    const take = Math.min(budget, frameCount, affordable);
+
+    if (process.env.NODE_ENV !== "production") {
+      console.log(
+        `[hero] ${frameCount} frames available, sampling ${take} at ` +
+          `${decodeW}x${decodeH} ≈ ${((take * perFrame) / 1048576).toFixed(0)} MB decoded`,
+      );
+    }
     const sampled: number[] = [];
     for (let i = 0; i < take; i++) {
       sampled.push(Math.round((i * (frameCount - 1)) / Math.max(1, take - 1)));

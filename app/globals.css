@@ -4929,3 +4929,138 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
   .room, .board2 { scroll-snap-type: none; }
 }
+
+/* ============================================================
+   MOBILE LANDING — paced, not one long scroll
+   ============================================================
+
+   The complaint was that everything reads as a single endless column. On a
+   phone that is what a stack of full-width grids becomes: every section the
+   same shape, the same rhythm, no sense of progress.
+
+   Three moves, none of which take control away from the reader:
+
+     1. Horizontal snap rails for anything that was a card grid. A row you
+        swipe through is shorter than a column you scroll past, and it makes
+        each set feel like a distinct set.
+     2. Alternating section entry — a colour step and an offset rule — so
+        consecutive zones don't look identical.
+     3. A thin progress hairline so the page has a visible end.
+
+   No scroll-jacking, no snap on the vertical axis, no auto-advance. Those are
+   the things that make people feel lost. Swiping a rail is a gesture the
+   reader starts and stops.
+   ============================================================ */
+
+@media (max-width: 760px) {
+
+  /* ---- 1. card grids become swipe rails ---- */
+
+  .mkt,
+  .pgrid,
+  .gal,
+  .deb,
+  .nums {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 78%;
+    grid-template-columns: none;
+    gap: 12px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    /* bleed to the screen edge so the next card peeks */
+    margin-inline: calc(var(--gutter, 16px) * -1);
+    padding-inline: var(--gutter, 16px);
+    padding-bottom: 6px;
+  }
+  .mkt::-webkit-scrollbar,
+  .pgrid::-webkit-scrollbar,
+  .gal::-webkit-scrollbar,
+  .deb::-webkit-scrollbar,
+  .nums::-webkit-scrollbar { display: none; }
+
+  .mkt > *,
+  .pgrid > *,
+  .gal > *,
+  .deb > *,
+  .nums > * {
+    scroll-snap-align: start;
+    min-width: 0;
+  }
+
+  /* the debate columns need to stay readable at 78vw */
+  .deb { grid-auto-columns: 86%; }
+  .deb__col { border-radius: var(--r2, 14px); }
+
+  /* rails need their own borders back — they were table-like before */
+  .nums > div,
+  .gal__item { border: 1px solid var(--line); border-radius: var(--r2, 14px); }
+  .nums > div { padding: 16px; }
+
+  /* ---- 2. the mosaic stays vertical but stops marching ---- */
+
+  .mos { grid-template-columns: repeat(4, 1fr); grid-auto-rows: 86px; gap: 6px; }
+  .mos__t--hero { grid-column: span 4; grid-row: span 2; }
+  .mos__t:nth-child(2) { grid-column: span 2; }
+  .mos__t:nth-child(3) { grid-column: span 2; }
+  .mos__t:nth-child(4) { grid-column: span 4; }
+  .mos__t:nth-child(5) { grid-column: span 2; }
+  .mos__t:nth-child(6) { grid-column: span 2; }
+  .mos__t:nth-child(7) { grid-column: span 4; }
+
+  /* ---- 3. alternating zone entry, so sections stop looking identical ---- */
+
+  .zone { padding-top: 54px; padding-bottom: 54px; position: relative; }
+
+  .zone--alt {
+    background:
+      linear-gradient(to bottom, rgba(232,163,61,0.045), transparent 180px),
+      var(--bg-alt);
+  }
+
+  /* an index rule that alternates side, giving direction to the descent */
+  .zone > .sec__head::before,
+  .zone > .zone__head::before {
+    content: "";
+    display: block;
+    width: 42px; height: 2px;
+    background: var(--amber);
+    margin-bottom: 16px;
+  }
+  .zone--alt > .sec__head::before,
+  .zone--alt > .zone__head::before {
+    margin-left: auto;
+    background: var(--ink);
+  }
+
+  /* ---- 4. timeline reads as a spine, not a list ---- */
+
+  .tl { border-top: 0; padding-left: 18px; position: relative; }
+  .tl::before {
+    content: ""; position: absolute; left: 3px; top: 6px; bottom: 6px;
+    width: 1px; background: linear-gradient(to bottom, var(--amber), var(--line) 40%, transparent);
+  }
+  .tl__row { border-bottom: 0; padding: 14px 0; position: relative; }
+  .tl__row::before {
+    content: ""; position: absolute; left: -19px; top: 20px;
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--bg); border: 1px solid var(--amber);
+  }
+
+  /* ---- 5. reading progress, so the page has a visible end ---- */
+
+  .progress {
+    position: fixed; left: 0; top: 0; height: 2px; z-index: 90;
+    background: var(--amber);
+    transform-origin: 0 50%;
+    pointer-events: none;
+    width: 100%;
+  }
+}
+
+@media (min-width: 761px) {
+  .progress { display: none; }
+}

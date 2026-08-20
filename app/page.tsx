@@ -19,6 +19,7 @@ import { NEWS, WIKI_SUBJECTS, placeImages } from "@/lib/newsroom";
 import { company, FACTS_AS_OF } from "@/lib/facts";
 import { marksFor } from "@/lib/ledger";
 import { orPreviewMarks, previewMode, PREVIEW_NOTE } from "@/lib/preview";
+import ReadingProgress from "@/components/ReadingProgress";
 
 export const revalidate = 300;
 
@@ -70,6 +71,7 @@ export default async function Page() {
 
   return (
     <>
+      <ReadingProgress />
       {previewMode() && (
         <div className="pvbar" role="status">
           <span className="mono pvbar__tag">Preview</span>
