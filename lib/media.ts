@@ -253,3 +253,142 @@ export async function leadershipPortrait(): Promise<Shot | null> {
   }
   return null;
 }
+
+/* ============================================================
+   COMMONS SEARCH
+   ============================================================
+
+   commonsFile() above resolves one known filename. That is fine for the
+   leadership portrait, where we want a specific frame, but it is the wrong
+   tool for filling an editorial grid: it means hard-coding two dozen exact
+   Commons filenames, each of which can be renamed or deleted upstream, and
+   every one that goes stale leaves a hole in the layout.
+
+   So: search instead. `generator=search` over the File namespace returns
+   candidates, imageinfo comes back in the same round trip, and the licence
+   filter below is the same machine-readable check used above — a file that
+   cannot be shown to be freely licensed is dropped rather than shipped with
+   a hopeful caption.
+*/
+
+const UA = "InveXt/1.0 (editorial use; contact: hello@invext.example)";
+
+function freeEnough(meta: any): boolean {
+  const short: string = meta?.LicenseShortName?.value ?? "";
+  const code: string = (meta?.License?.value ?? "").toLowerCase();
+  if (FREE.has(code)) return true;
+  return /^(cc[ -]|public domain|pd)/i.test(short);
+}
+
+const strip = (html?: string) => (html ? html.replace(/<[^>]*>/g, "").trim() : "");
+
+/**
+ * Free-licensed files matching a query, newest-relevance first.
+ * `filetype:bitmap` keeps SVG diagrams and PDFs out of a photo grid.
+ */
+export async function commonsSearch(
+  query: string,
+  count = 8,
+  widthPx = 1000,
+): Promise<Shot[]> {
+  try {
+    const api =
+      "https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*" +
+      "&generator=search&gsrnamespace=6" +
+      `&gsrlimit=${Math.min(40, count * 4)}` +
+      `&gsrsearch=${encodeURIComponent(`filetype:bitmap ${query}`)}` +
+      "&prop=imageinfo&iiprop=url|extmetadata|size" +
+      `&iiurlwidth=${widthPx}`;
+
+    const res = await fetch(api, {
+      headers: { "User-Agent": UA },
+      next: { revalidate: DAY * 3 },
+    });
+    if (!res.ok) return [];
+
+    const json = await res.json();
+    const pages: any[] = Object.values(json?.query?.pages ?? {});
+
+    return pages
+      .filter((pg) => {
+        const info = pg?.imageinfo?.[0];
+        if (!info?.thumburl && !info?.url) return false;
+        // Landscape-ish and reasonably large; portrait crops badly in a strip.
+        if (info.width && info.height && info.width < 480) return false;
+        return freeEnough(info.extmetadata);
+      })
+      .slice(0, count)
+      .map((pg) => {
+        const info = pg.imageinfo[0];
+        const meta = info.extmetadata ?? {};
+        return {
+          id: String(pg.title),
+          title:
+            strip(meta.ObjectName?.value) ||
+            String(pg.title).replace(/^File:/, "").replace(/\.[a-z]+$/i, ""),
+          src: info.thumburl ?? info.url,
+          credit: strip(meta.Artist?.value) || "Wikimedia Commons contributor",
+          licence: strip(meta.LicenseShortName?.value) || "Free licence",
+          licenceUrl: meta.LicenseUrl?.value,
+          sourceUrl: info.descriptionurl,
+          kind: "image" as const,
+        };
+      });
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Subject queries for the editorial layer.
+ *
+ * Deliberately narrow. "Elon Musk" alone returns a great deal of protest
+ * placard photography and meme derivatives; naming the venue or the hardware
+ * gets press-conference and factory-floor frames, which is what an editorial
+ * grid actually wants.
+ */
+export const SUBJECT_QUERIES: Record<string, string> = {
+  musk: "Elon Musk portrait speaking",
+  muskPress: "Elon Musk press conference",
+  muskFactory: "Elon Musk factory Tesla",
+  tesla: "Tesla Model S Model 3 car",
+  cybertruck: "Tesla Cybertruck",
+  gigafactory: "Tesla Gigafactory building",
+  optimus: "Tesla Optimus humanoid robot",
+  falcon: "Falcon 9 rocket launch SpaceX",
+  starship: "SpaceX Starship Starbase",
+  dragon: "SpaceX Dragon capsule spacecraft",
+  starlink: "Starlink satellite dish antenna",
+  boring: "Boring Company tunnel Las Vegas Loop",
+  neuralink: "brain computer interface neurotechnology implant",
+  datacentre: "data centre server racks GPU",
+  nasdaq: "stock exchange trading floor screens",
+};
+
+/**
+ * Resolve every subject in one pass and hand back a flat, deduplicated pool.
+ * Failures are silent by design: a subject that returns nothing simply
+ * contributes nothing, and the assignment step below redistributes.
+ */
+export async function subjectPool(
+  subjects: string[],
+  perSubject = 4,
+): Promise<Shot[]> {
+  const sets = await Promise.all(
+    subjects.map((s) => commonsSearch(SUBJECT_QUERIES[s] ?? s, perSubject)),
+  );
+
+  const seen = new Set<string>();
+  const out: Shot[] = [];
+  // Round-robin so the pool alternates subjects rather than delivering four
+  // Cybertrucks before the first rocket.
+  for (let round = 0; round < perSubject; round++) {
+    for (const set of sets) {
+      const s = set[round];
+      if (!s || seen.has(s.id)) continue;
+      seen.add(s.id);
+      out.push(s);
+    }
+  }
+  return out;
+}

@@ -1,159 +1,249 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-
-export interface SeqVariant {
-  src: (i: number) => string;
-  frameCount: number;
-  width: number;
-  height: number;
-}
+import { useCallback, useEffect, useRef, useState } from "react";
+import { resolveSequence, type SeqSource } from "@/lib/hero-frames";
+import { cropAt, heatAt } from "@/lib/hero-motion";
 
 interface Props {
-  desktop: SeqVariant;
-  /** Portrait render for narrow viewports. Falls back to desktop if omitted. */
-  mobile?: SeqVariant;
-  breakpoint?: number;
+  /** Viewport heights of pinned scroll. */
   scrollLength?: number;
-  /** Shorter pin on phones — 3+ viewports of pinned scroll reads as a dead zone. */
   mobileScrollLength?: number;
+  /** 0-1. Lower is heavier; the scrubber trails the scroll and settles. */
   damping?: number;
+  breakpoint?: number;
   onProgress?: (p: number) => void;
+  /** Fires only when the painted frame changes — not every rAF. */
+  onFrame?: (index: number, total: number) => void;
   children?: React.ReactNode;
 }
 
+/* ----------------------------------------------------------------- utils -- */
+
+/**
+ * Load order by binary subdivision: first and last, then halves, then
+ * quarters. The alternative - loading 0,1,2,3 in order - means the last third
+ * of the sequence is still blank when someone has already scrolled to it. This
+ * way the whole timeline is covered coarsely within a second and refines in
+ * place, so an early scrub is choppy rather than empty.
+ */
+function subdivide(n: number): number[] {
+  const out: number[] = [];
+  const seen = new Uint8Array(n);
+  const push = (i: number) => {
+    if (i >= 0 && i < n && !seen[i]) {
+      seen[i] = 1;
+      out.push(i);
+    }
+  };
+  push(0);
+  push(n - 1);
+  for (let step = n; step > 1; ) {
+    step = Math.max(1, Math.floor(step / 2));
+    for (let i = step; i < n; i += step) push(i);
+    if (step === 1) break;
+  }
+  for (let i = 0; i < n; i++) push(i);
+  return out;
+}
+
+/** Nearest loaded key to `target`, over a sorted ascending array. */
+function nearestKey(keys: number[], target: number): number {
+  const n = keys.length;
+  if (n === 0) return -1;
+  if (target <= keys[0]) return keys[0];
+  if (target >= keys[n - 1]) return keys[n - 1];
+  let lo = 0;
+  let hi = n - 1;
+  while (lo + 1 < hi) {
+    const mid = (lo + hi) >> 1;
+    if (keys[mid] <= target) lo = mid;
+    else hi = mid;
+  }
+  return target - keys[lo] <= keys[hi] - target ? keys[lo] : keys[hi];
+}
+
+function insertSorted(keys: number[], k: number) {
+  let lo = 0;
+  let hi = keys.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (keys[mid] < k) lo = mid + 1;
+    else hi = mid;
+  }
+  keys.splice(lo, 0, k);
+}
+
+const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
+
+/* ------------------------------------------------------------- component -- */
+
 export default function ScrollSequence({
-  desktop,
-  mobile,
+  scrollLength = 3.6,
+  mobileScrollLength = 2.8,
+  damping = 0.14,
   breakpoint = 820,
-  scrollLength = 3.4,
-  mobileScrollLength,
-  damping = 0.16,
   onProgress,
+  onFrame,
   children,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const frames = useRef<(ImageBitmap | HTMLImageElement | null)[]>([]);
+  /** Sampled source index -> decoded frame. */
+  const bmp = useRef(new Map<number, ImageBitmap | HTMLImageElement>());
+  /** Sorted sampled indices that are decoded and drawable. */
+  const keys = useRef<number[]>([]);
+
   const target = useRef(0);
   const current = useRef(0);
-  const raf = useRef<number>(0);
-  const visible = useRef(true);
+  const raf = useRef(0);
+  const onScreen = useRef(true);
+  const painted = useRef(false);
   const cb = useRef(onProgress);
   cb.current = onProgress;
+  const fcb = useRef(onFrame);
+  fcb.current = onFrame;
 
-  const [isNarrow, setIsNarrow] = useState<boolean | null>(null);
+  const [narrow, setNarrow] = useState<boolean | null>(null);
+  const [source, setSource] = useState<SeqSource | null>(null);
   const [loaded, setLoaded] = useState(0);
-  const [ready, setReady] = useState(false);
+  const [firstPaint, setFirstPaint] = useState(false);
 
-  // Resolved on mount and on breakpoint crossing — never mid-scroll, because
-  // swapping sequences under a moving scrubber reads as a glitch.
+  /* --------------------------------------------------------- breakpoint -- */
+
+  // Resolved on mount and on breakpoint crossing, never mid-scroll: swapping
+  // sequences under a moving scrubber reads as a glitch, not a refinement.
   useEffect(() => {
     const mq = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
-    setIsNarrow(mq.matches);
-    const onChange = (e: MediaQueryListEvent) => setIsNarrow(e.matches);
+    setNarrow(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setNarrow(e.matches);
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
   }, [breakpoint]);
 
-  const variant = isNarrow && mobile ? mobile : desktop;
+  /* ------------------------------------------------------------- resolve -- */
 
-  /* ------------------------------------------------------------------
-     LOAD
-
-     Decoded RGBA is the real cost, not the download. 96 frames at
-     900x630 decoded natively is ~218 MB, which is what gets a mobile
-     Safari tab reaped mid-scroll.
-
-     Three mitigations, by effect:
-       1. A smaller portrait render for narrow viewports (64 frames, 560x700).
-       2. createImageBitmap resize options, so frames decode near the size
-          they'll actually be painted instead of at native resolution.
-       3. Every other frame on very small screens.
-  ------------------------------------------------------------------ */
   useEffect(() => {
-    if (isNarrow === null) return;
+    if (narrow === null) return;
+    let dead = false;
+    resolveSequence(narrow).then((s) => {
+      if (!dead) setSource(s);
+    });
+    return () => {
+      dead = true;
+    };
+  }, [narrow]);
 
-    let cancelled = false;
-    const { src, frameCount, width, height } = variant;
+  /* ---------------------------------------------------------------- load -- */
 
+  useEffect(() => {
+    if (!source) return;
+
+    let dead = false;
+    const { src, frameCount, width, height, budget } = source;
+
+    // Decode near the size we will actually paint. A native-resolution decode
+    // of a 1920x1080 frame costs 8 MB of RGBA whether or not it is ever drawn
+    // that large.
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const scale = Math.max((vw * dpr) / width, (vh * dpr) / height);
-    const decodeW = Math.min(width, Math.ceil(width * Math.min(scale, 1)));
-    const decodeH = Math.round((decodeW / width) * height);
+    const cover = Math.max((vw * dpr) / width, (vh * dpr) / height);
+    const decodeW = Math.max(1, Math.round(width * Math.min(cover, 1)));
+    const decodeH = Math.max(1, Math.round((decodeW / width) * height));
 
-    const step = vw < 420 ? 2 : 1;
-    const indices = Array.from(
-      { length: Math.ceil(frameCount / step) },
-      (_, i) => Math.min(frameCount - 1, i * step),
-    );
+    // Even sample across the whole sequence, capped by the memory budget.
+    const take = Math.min(budget, frameCount);
+    const sampled: number[] = [];
+    for (let i = 0; i < take; i++) {
+      sampled.push(Math.round((i * (frameCount - 1)) / Math.max(1, take - 1)));
+    }
 
-    frames.current.forEach((f) => {
+    // Reset any previous sequence.
+    bmp.current.forEach((f) => {
       if (f && "close" in f) (f as ImageBitmap).close();
     });
-    frames.current = new Array(frameCount).fill(null);
-    setReady(false);
+    bmp.current.clear();
+    keys.current = [];
+    painted.current = false;
     setLoaded(0);
+    setFirstPaint(false);
 
+    const order = subdivide(sampled.length);
     let done = 0;
+    let cursor = 0;
 
-    (async () => {
-      for (const i of indices) {
-        if (cancelled) return;
-        try {
-          const res = await fetch(src(i));
-          const blob = await res.blob();
+    const decode = async (slot: number) => {
+      const idx = sampled[slot];
+      try {
+        const res = await fetch(src(idx), { cache: "force-cache" });
+        if (!res.ok) throw new Error(String(res.status));
+        const blob = await res.blob();
 
-          let bmp: ImageBitmap | HTMLImageElement;
-          if ("createImageBitmap" in window) {
-            try {
-              bmp = await createImageBitmap(blob, {
-                resizeWidth: decodeW,
-                resizeHeight: decodeH,
-                resizeQuality: "high",
-              });
-            } catch {
-              // Safari has historically ignored or rejected resize options.
-              bmp = await createImageBitmap(blob);
-            }
-          } else {
-            bmp = await new Promise<HTMLImageElement>((ok, no) => {
-              const im = new Image();
-              im.onload = () => ok(im);
-              im.onerror = no;
-              im.src = URL.createObjectURL(blob);
+        let img: ImageBitmap | HTMLImageElement;
+        if ("createImageBitmap" in window) {
+          try {
+            img = await createImageBitmap(blob, {
+              resizeWidth: decodeW,
+              resizeHeight: decodeH,
+              resizeQuality: "high",
             });
+          } catch {
+            // Safari has historically rejected or ignored resize options.
+            img = await createImageBitmap(blob);
           }
-
-          if (cancelled) {
-            if ("close" in bmp) (bmp as ImageBitmap).close();
-            return;
-          }
-          frames.current[i] = bmp;
-          if (step === 2 && i + 1 < frameCount) frames.current[i + 1] = bmp;
-        } catch {
-          /* a dropped frame is survivable — nearest lookup covers it */
+        } else {
+          const url = URL.createObjectURL(blob);
+          img = await new Promise<HTMLImageElement>((ok, no) => {
+            const im = new Image();
+            im.onload = () => ok(im);
+            im.onerror = no;
+            im.src = url;
+          });
         }
-        done++;
-        setLoaded(done / indices.length);
-        if (done === 1) setReady(true);
+
+        if (dead) {
+          if ("close" in img) (img as ImageBitmap).close();
+          return;
+        }
+        bmp.current.set(idx, img);
+        insertSorted(keys.current, idx);
+        if (!painted.current) {
+          painted.current = true;
+          setFirstPaint(true);
+        }
+      } catch {
+        // A dropped frame is survivable - nearest-key lookup covers the gap.
       }
-    })();
+      done++;
+      setLoaded(done / order.length);
+    };
+
+    // Small pool: six in flight keeps the connection busy without starving
+    // the rest of the page during first paint.
+    const POOL = 6;
+    const workers = Array.from({ length: POOL }, async () => {
+      while (!dead && cursor < order.length) {
+        const slot = order[cursor++];
+        await decode(slot);
+      }
+    });
+    void Promise.all(workers);
 
     return () => {
-      cancelled = true;
-      frames.current.forEach((f) => {
+      dead = true;
+      bmp.current.forEach((f) => {
         if (f && "close" in f) (f as ImageBitmap).close();
       });
-      frames.current = [];
+      bmp.current.clear();
+      keys.current = [];
     };
-  }, [variant, isNarrow]);
+  }, [source]);
 
-  /* ---------------- size ---------------- */
-  const fit = useRef({ dx: 0, dy: 0, dw: 0, dh: 0 });
+  /* ---------------------------------------------------------------- fit -- */
+
+  const fit = useRef({ w: 0, h: 0 });
 
   const resize = useCallback(() => {
     const c = canvasRef.current;
@@ -164,20 +254,15 @@ export default function ScrollSequence({
     if (!w || !h) return;
     c.width = Math.round(w * dpr);
     c.height = Math.round(h * dpr);
-    const scale = Math.max((w * dpr) / variant.width, (h * dpr) / variant.height);
-    const dw = variant.width * scale;
-    const dh = variant.height * scale;
-    // Bias the crop upward in portrait so the ring sits above the headline
-    // instead of behind it.
-    const yBias = h > w ? 0.34 : 0.5;
-    fit.current = { dx: (w * dpr - dw) / 2, dy: (h * dpr - dh) * yBias, dw, dh };
-  }, [variant]);
+    fit.current = { w: c.width, h: c.height };
+  }, []);
 
-  /* ---------------- scrub ---------------- */
+  /* -------------------------------------------------------------- scrub -- */
+
   useEffect(() => {
     const wrap = wrapRef.current;
     const canvas = canvasRef.current;
-    if (!wrap || !canvas) return;
+    if (!wrap || !canvas || !source) return;
 
     const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) return;
@@ -189,53 +274,91 @@ export default function ScrollSequence({
     window.addEventListener("orientationchange", resize);
 
     const io = new IntersectionObserver(
-      ([e]) => (visible.current = e.isIntersecting),
-      { rootMargin: "12% 0px" },
+      ([e]) => {
+        onScreen.current = e.isIntersecting;
+      },
+      { rootMargin: "15% 0px" },
     );
     io.observe(wrap);
 
     const readScroll = () => {
       const r = wrap.getBoundingClientRect();
       const total = wrap.offsetHeight - window.innerHeight;
-      target.current = total > 0 ? Math.min(1, Math.max(0, -r.top / total)) : 0;
+      target.current = total > 0 ? clamp01(-r.top / total) : 0;
     };
     readScroll();
     current.current = target.current;
     window.addEventListener("scroll", readScroll, { passive: true });
 
-    let lastDrawn = -1;
-
-    const nearest = (i: number) => {
-      if (frames.current[i]) return frames.current[i];
-      for (let d = 1; d < 14; d++) {
-        if (frames.current[i - d]) return frames.current[i - d];
-        if (frames.current[i + d]) return frames.current[i + d];
-      }
-      return null;
-    };
+    let lastGeom = "";
+    let lastKey = -1;
+    let lastHeat = -1;
 
     const tick = () => {
       raf.current = requestAnimationFrame(tick);
-      if (!visible.current) return;
+      if (!onScreen.current) return;
 
-      current.current += reduced
-        ? target.current - current.current
-        : (target.current - current.current) * damping;
+      // Damped follow. The lag is the point: it turns a jittery wheel or a
+      // trackpad's stepped deltas into continuous motion.
+      const delta = target.current - current.current;
+      current.current += reduced ? delta : delta * damping;
+      if (Math.abs(delta) < 0.00008) current.current = target.current;
 
       const p = current.current;
       cb.current?.(p);
 
-      const n = variant.frameCount;
-      const idx = Math.min(n - 1, Math.max(0, Math.round(p * (n - 1))));
-      if (idx === lastDrawn) return;
+      // Written as a custom property rather than through React: the blades and
+      // the focal blur need this every frame, and re-rendering the whole hero
+      // sixty times a second to move two divs is not a trade worth making.
+      const heat = reduced ? 0 : heatAt(p);
+      if (Math.abs(heat - lastHeat) > 0.004) {
+        lastHeat = heat;
+        stageRef.current?.style.setProperty("--heat", heat.toFixed(3));
+      }
 
-      const img = nearest(idx);
+      const n = source.frameCount;
+      const want = Math.round(p * (n - 1));
+      const key = nearestKey(keys.current, want);
+      if (key < 0) return;
+
+      const img = bmp.current.get(key);
       if (!img) return;
-      const { dx, dy, dw, dh } = fit.current;
-      ctx.fillStyle = "#09090b";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      /**
+       * Crop choreography comes from the shared motion model, so the camera and
+       * the copy are reading the same timeline. The old code did a constant
+       * zoom here and the text did its own thing above it; the two never lined
+       * up because nothing made them.
+       */
+      const crop = reduced ? { x: 0.5, y: 0.44, zoom: 1 } : cropAt(p);
+
+      const cw = fit.current.w;
+      const ch = fit.current.h;
+      const sw = source.width;
+      const sh = source.height;
+
+      const cover = Math.max(cw / sw, ch / sh) * crop.zoom;
+      const dw = sw * cover;
+      const dh = sh * cover;
+
+      // Anchors are 0-1 across the frame, so a portrait viewport crops toward
+      // whichever part of the render the plate is about instead of always
+      // centring and letting the subject sit behind the headline.
+      const dx = (cw - dw) * crop.x;
+      const dy = (ch - dh) * crop.y;
+
+      const geom = `${key}|${dx.toFixed(1)}|${dy.toFixed(1)}|${dw.toFixed(1)}`;
+      if (geom === lastGeom) return;
+      lastGeom = geom;
+
+      if (key !== lastKey) {
+        lastKey = key;
+        fcb.current?.(key, n);
+      }
+
+      ctx.fillStyle = "#08080a";
+      ctx.fillRect(0, 0, cw, ch);
       ctx.drawImage(img as CanvasImageSource, dx, dy, dw, dh);
-      lastDrawn = idx;
     };
     raf.current = requestAnimationFrame(tick);
 
@@ -246,17 +369,37 @@ export default function ScrollSequence({
       window.removeEventListener("orientationchange", resize);
       io.disconnect();
     };
-  }, [variant, damping, resize]);
+  }, [source, damping, resize]);
+
+  const len = narrow && mobileScrollLength ? mobileScrollLength : scrollLength;
 
   return (
-    <div ref={wrapRef} className="seq" style={{ height: `${(isNarrow && mobileScrollLength ? mobileScrollLength : scrollLength) * 100}svh` }}>
-      <div className="seq__stage">
-        <canvas ref={canvasRef} className="seq__canvas" />
+    <div
+      ref={wrapRef}
+      className="seq"
+      /**
+       * Height in dvh, not svh.
+       *
+       * The sticky stage is one viewport tall and the track is `len` of them.
+       * If the track is measured in svh (toolbar showing) while the stage
+       * resolves to the larger dvh once the toolbar retracts, the last stage
+       * height doesn't fit inside the last unit of track — and the difference
+       * shows up as a band of empty page between the hero and the ticker. Both
+       * now use the same unit, so the pin releases exactly at the seam.
+       */
+      style={{ height: `${len * 100}dvh` }}
+    >
+      <div ref={stageRef} className="seq__stage">
+        <canvas ref={canvasRef} className="seq__canvas" aria-hidden="true" />
+        <div className="seq__grain" aria-hidden="true" />
         {children}
-        {!ready && (
-          <div className="seq__loading">
-            <span>Loading</span>
-            <span>{String(Math.round(loaded * 100)).padStart(3, "0")}%</span>
+
+        {!firstPaint && (
+          <div className="seq__boot">
+            <span className="mono">Loading sequence</span>
+            <span className="mono seq__bootN">
+              {String(Math.round(loaded * 100)).padStart(3, "0")}%
+            </span>
           </div>
         )}
       </div>
