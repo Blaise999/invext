@@ -76,11 +76,20 @@ export default function PortfolioPanel({
   const H = 190;
   const PAD = 10;
 
+  // Always have a usable series (pure cash / no history → flat line at current total)
+  const safeSeries = useMemo(() => {
+    if (series.length >= 2) return series;
+    return Array(30).fill(total);
+  }, [series, total]);
+
   const view = useMemo(() => {
     const cfg = RANGES.find((r) => r.id === range)!;
-    const n = Math.min(series.length, cfg.days === Infinity ? series.length : cfg.days);
-    return series.slice(-Math.max(n, 2));
-  }, [series, range]);
+    const n = Math.min(
+      safeSeries.length,
+      cfg.days === Infinity ? safeSeries.length : cfg.days,
+    );
+    return safeSeries.slice(-Math.max(n, 2));
+  }, [safeSeries, range]);
 
   const { d, area, pts, min, max } = useMemo(() => {
     if (view.length < 2) return { d: "", area: "", pts: [] as [number, number][], min: 0, max: 0 };
@@ -96,8 +105,8 @@ export default function PortfolioPanel({
     return { d: line, area: `${line} L${W},${H} L0,${H} Z`, pts: p, min: lo, max: hi };
   }, [view]);
 
-  const first = view[0] ?? 0;
-  const last = view[view.length - 1] ?? 0;
+  const first = view[0] ?? total;
+  const last = view[view.length - 1] ?? total;
   const shown = hover != null ? view[hover] : last;
   const base = hover != null ? first : first;
   const deltaAbs = shown - base;
@@ -213,7 +222,7 @@ export default function PortfolioPanel({
 
       <div className="pp__ranges" role="tablist" aria-label="Chart range">
         {RANGES.map((r) => {
-          const enough = series.length > 2;
+          const enough = safeSeries.length > 2;
           return (
             <button
               key={r.id}
