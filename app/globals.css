@@ -4230,6 +4230,10 @@ html, body {
   position: sticky;
   top: 0;
   height: 100dvh;
+  /* Belt and braces against the seam: even if a browser resolves dvh oddly
+     mid-gesture, the stage can never be shorter than the viewport, so no strip
+     of page can appear beneath it. */
+  min-height: 100svh;
   overflow: clip;
   contain: paint;
 }
@@ -4542,20 +4546,10 @@ html, body {
   letter-spacing: -0.02em;
 }
 
-/* The mark: a square gate with a slit through it — the same aperture the
-   transitions use, so the logo and the motion are the same idea. */
-.wordmark::before {
-  content: "";
-  width: 22px;
-  height: 22px;
-  flex: none;
-  border: 1.5px solid var(--amber);
-  background:
-    linear-gradient(to bottom, transparent calc(50% - 1px), var(--amber) calc(50% - 1px), var(--amber) calc(50% + 1px), transparent calc(50% + 1px));
-  transition: transform var(--snap);
-}
-.wordmark:hover::before { transform: rotate(45deg); }
-.wordmark span { color: var(--amber); }
+/* The mark is rendered by <Brand>, not drawn here — one logo, one source. */
+.wordmark .brand { display: inline-flex; align-items: center; }
+.wordmark .brand__m { transition: transform var(--snap); }
+.wordmark:hover .brand__m { transform: translateY(-1px); }
 
 /* ------------------------------------------------------------------ fit -- */
 
@@ -4730,8 +4724,7 @@ html, body {
   .tp__seg > i { background: var(--neon); }
   .tp__seg.is-on > span { color: var(--neon); }
   .ap__cut { background: linear-gradient(90deg, transparent, var(--neon), transparent); }
-  .wordmark::before { border-color: var(--neon); }
-  .wordmark span { color: var(--neon); }
+
 }
 
 /* ============================================================================

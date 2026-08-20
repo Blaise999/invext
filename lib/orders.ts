@@ -9,6 +9,7 @@ import { networkById, checkAddress, NETWORKS } from "./networks";
 import {
   appendTransaction,
   cashForUser,
+  positionsForUser,
   resolveDepositAddress,
   logActivity,
   pushNotification,
@@ -101,10 +102,70 @@ export async function placeOrder(
   }
 
   const price = resolved.price;
-  const quantity =
-    mode === "shares" ? Number(size.toFixed(6)) : Number((size / price).toFixed(6));
+
+  /**
+   * SIZING
+   *
+   * The naive version — divide, round to six places, multiply back — is what
+   * made "buy with everything" and "sell everything" fail on a cent.
+   *
+   * Buying $500.00 of a $173.33 stock gives 2.884671... shares. Rounded up to
+   * six places that is 2.884672, and 2.884672 x 173.33 rounds to $500.01. The
+   * ledger then rejects the order for insufficient cash against a balance of
+   * exactly $500.00, which to the person typing it looks like the app can't do
+   * arithmetic.
+   *
+   * Selling has the mirror problem: a holding of 2.884672 shares entered as
+   * 2.884672 can land a hair above the stored quantity once both sides have
+   * been rounded, and the position check refuses a sale of the whole position.
+   *
+   * So: floor when converting dollars to shares, never round up — the fill can
+   * come in a cent under what was asked, never a cent over. Then snap to the
+   * true edge when the request is within a rounding whisker of it, because
+   * "all of it" is what was meant.
+   */
+  const EPS = 5e-6;
+
+  let quantity =
+    mode === "shares"
+      ? Number(size.toFixed(6))
+      : Math.floor((size / price) * 1e6) / 1e6;
+
   if (quantity <= 0) {
     return { ok: false, error: "That works out to zero shares at the current price." };
+  }
+
+  if (side === "buy") {
+    // Clamp to what's actually spendable. Catches the max-buy case above and
+    // gives a truthful error instead of one that reads as a bug.
+    const available = await cashForUser(user.id);
+    const affordable = Math.floor((available / price) * 1e6) / 1e6;
+
+    if (affordable <= 0) {
+      return {
+        ok: false,
+        error: `Your available cash is ${available.toFixed(2)}, which isn't enough for one share of ${resolved.symbol} at ${price.toFixed(2)}.`,
+      };
+    }
+    // Only ever trims — an order well inside the balance is untouched.
+    if (quantity > affordable) quantity = affordable;
+  } else {
+    const held = (await positionsForUser(user.id))
+      .filter((x) => x.symbol.toUpperCase() === resolved.symbol.toUpperCase())
+      .reduce((n, x) => n + x.quantity, 0);
+
+    if (held <= 0) {
+      return { ok: false, error: `You don't hold any ${resolved.symbol}.` };
+    }
+    // Sell-all: within a rounding whisker of the whole position means the whole
+    // position, so no unsellable dust is left behind.
+    if (quantity > held - EPS) quantity = Number(held.toFixed(6));
+    if (quantity > held) {
+      return {
+        ok: false,
+        error: `You hold ${held} ${resolved.symbol}, which is less than you're trying to sell.`,
+      };
+    }
   }
 
   const notional = round2(quantity * price);

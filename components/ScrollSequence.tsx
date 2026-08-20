@@ -62,6 +62,34 @@ function nearestKey(keys: number[], target: number): number {
   return target - keys[lo] <= keys[hi] - target ? keys[lo] : keys[hi];
 }
 
+/**
+ * The two loaded keys either side of `target`, plus how far between them we are.
+ *
+ * A thousand-frame render sampled down to ~130 means roughly one stored frame
+ * every eight scroll positions, and snapping to the nearest one is what made the
+ * motion step instead of flow. Painting the lower frame and then the upper frame
+ * over it at partial alpha costs one extra drawImage and removes the stepping
+ * entirely — the eye reads the blend as an in-between frame.
+ */
+function bracket(keys: number[], target: number): [number, number, number] {
+  const n = keys.length;
+  if (n === 0) return [-1, -1, 0];
+  if (target <= keys[0]) return [keys[0], keys[0], 0];
+  if (target >= keys[n - 1]) return [keys[n - 1], keys[n - 1], 0];
+
+  let lo = 0;
+  let hi = n - 1;
+  while (lo + 1 < hi) {
+    const mid = (lo + hi) >> 1;
+    if (keys[mid] <= target) lo = mid;
+    else hi = mid;
+  }
+  const a = keys[lo];
+  const b = keys[hi];
+  const span = b - a;
+  return [a, b, span > 0 ? (target - a) / span : 0];
+}
+
 function insertSorted(keys: number[], k: number) {
   let lo = 0;
   let hi = keys.length;
@@ -345,19 +373,16 @@ export default function ScrollSequence({
       }
 
       const n = source.frameCount;
-      const want = Math.round(p * (n - 1));
-      const key = nearestKey(keys.current, want);
-      if (key < 0) return;
+      // Fractional, not rounded — the blend below needs the position between
+      // frames, and rounding here is what threw that information away.
+      const want = p * (n - 1);
+      const [ka, kb, t] = bracket(keys.current, want);
+      if (ka < 0) return;
 
-      const img = bmp.current.get(key);
-      if (!img) return;
+      const imgA = bmp.current.get(ka);
+      if (!imgA) return;
+      const imgB = kb !== ka ? bmp.current.get(kb) : undefined;
 
-      /**
-       * Crop choreography comes from the shared motion model, so the camera and
-       * the copy are reading the same timeline. The old code did a constant
-       * zoom here and the text did its own thing above it; the two never lined
-       * up because nothing made them.
-       */
       const crop = reduced ? { x: 0.5, y: 0.44, zoom: 1 } : cropAt(p);
 
       const cw = fit.current.w;
@@ -375,18 +400,27 @@ export default function ScrollSequence({
       const dx = (cw - dw) * crop.x;
       const dy = (ch - dh) * crop.y;
 
-      const geom = `${key}|${dx.toFixed(1)}|${dy.toFixed(1)}|${dw.toFixed(1)}`;
+      // Quantise the blend to 1/24 so a still scrubber doesn't repaint forever
+      // on floating-point noise, but keep enough steps that it reads continuous.
+      const tq = Math.round(t * 24) / 24;
+      const geom = `${ka}|${kb}|${tq}|${dx.toFixed(1)}|${dy.toFixed(1)}|${dw.toFixed(1)}`;
       if (geom === lastGeom) return;
       lastGeom = geom;
 
-      if (key !== lastKey) {
-        lastKey = key;
-        fcb.current?.(key, n);
+      if (ka !== lastKey) {
+        lastKey = ka;
+        fcb.current?.(ka, n);
       }
 
       ctx.fillStyle = "#08080a";
       ctx.fillRect(0, 0, cw, ch);
-      ctx.drawImage(img as CanvasImageSource, dx, dy, dw, dh);
+      ctx.globalAlpha = 1;
+      ctx.drawImage(imgA as CanvasImageSource, dx, dy, dw, dh);
+      if (imgB && tq > 0) {
+        ctx.globalAlpha = tq;
+        ctx.drawImage(imgB as CanvasImageSource, dx, dy, dw, dh);
+        ctx.globalAlpha = 1;
+      }
     };
     raf.current = requestAnimationFrame(tick);
 

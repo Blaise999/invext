@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ScrollSequence from "./ScrollSequence";
+import Brand from "./Brand";
 import {
   PLATES,
   SEG,
@@ -105,8 +106,11 @@ export default function Hero() {
       <div className="hero" style={{ "--heat": heat } as React.CSSProperties}>
         {/* ---------------- masthead ---------------- */}
         <header className="hero__nav">
+          {/* The actual mark — same component the dashboard header uses, so the
+              logo is one thing in one place rather than a CSS approximation
+              that drifts from it. */}
           <a className="wordmark" href="/" aria-label="InveXt home">
-            InveX<span>t</span>
+            <Brand size={26} />
           </a>
           <nav aria-label="Primary">
             <a href="#market">Markets</a>
