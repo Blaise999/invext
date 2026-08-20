@@ -1,15 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-/**
- * These come from ./desk-actions, NOT ./actions.
- *
- * ./actions talks to the 0001 crypto schema — `withdrawals`, `chain_deposits`,
- * `private_prices` — which is a different ledger from the one this page's data
- * is read from, and from the one lib/orders.ts writes. Posting a decision into
- * one while displaying the other is how an operator approves a withdrawal the
- * customer's balance has never heard of.
- */
 import {
   reviewTransfer,
   adjustBalance,
@@ -19,7 +10,7 @@ import {
   setNetworkDefault,
 } from "./desk-actions";
 import { NETWORKS, checkAddress } from "@/lib/networks";
-import { privateCos } from "@/lib/data";
+import { PRIVATE_LISTINGS } from "@/lib/private";   // ← the real 12
 
 type Tab = "transfers" | "balances" | "marks" | "addresses" | "log";
 
@@ -52,7 +43,7 @@ export default function AdminTabs({
   const tabs: [Tab, string, number][] = [
     ["transfers", "Transfers", transfers.length],
     ["balances", "Balances", users.length],
-    ["marks", "Private marks", privateCos.length],
+    ["marks", "Private marks", PRIVATE_LISTINGS.length], // ← now shows 12
     ["addresses", "Addresses", addresses.length],
     ["log", "Audit log", activity.length],
   ];
@@ -270,10 +261,6 @@ function TransferRow({ t, run, busy }: any) {
         {t.network ? (
           <>
             <span className="tbl__sym">{t.network}</span>
-            {/* The destination is what an approval actually authorises, so it
-                is shown in full rather than truncated — an operator can't
-                check an address they can only see half of. It's immutable
-                once filed; the database rejects any edit to it. */}
             {t.destination && (
               <code className="adm__addr adm__addr--dest">{t.destination}</code>
             )}
@@ -379,7 +366,7 @@ function BalanceRow({ u, run, busy }: any) {
 }
 
 function MarkForm({ run, busy }: any) {
-  const [symbol, setSymbol] = useState(privateCos[0]?.short ?? "");
+  const [symbol, setSymbol] = useState(PRIVATE_LISTINGS[0]?.symbol ?? "");
   const [price, setPrice] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [basis, setBasis] = useState("");
@@ -394,9 +381,9 @@ function MarkForm({ run, busy }: any) {
           value={symbol}
           onChange={(e) => setSymbol(e.target.value)}
         >
-          {privateCos.map((c) => (
-            <option key={c.short} value={c.short}>
-              {c.short} — {c.name}
+          {PRIVATE_LISTINGS.map((c) => (
+            <option key={c.symbol} value={c.symbol}>
+              {c.symbol} — {c.name}
             </option>
           ))}
         </select>
@@ -438,18 +425,6 @@ function MarkForm({ run, busy }: any) {
   );
 }
 
-/**
- * Addresses, both levels.
- *
- * Global defaults come first because that's the one that has to be right —
- * every customer without an override sends there. The per-user override sits
- * underneath as the exception.
- *
- * The network is a fixed list rather than a text box: an override on a rail
- * that doesn't exist in lib/networks.ts would be invisible to customers, and a
- * typo'd chain name is exactly the sort of thing nobody notices until the
- * money is gone.
- */
 function AddressForm({ users, addresses, netAddresses, run, busy }: any) {
   const [netId, setNetId] = useState(NETWORKS[0].id);
   const [gAddr, setGAddr] = useState("");
