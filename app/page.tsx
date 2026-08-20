@@ -1,5 +1,6 @@
 import Hero from "@/components/Hero";
 import Reveal from "@/components/Reveal";
+import { readSequences } from "@/lib/sequence-server";
 import Ticker from "@/components/Ticker";
 import PrivateList from "@/components/PrivateList";
 import Faq from "@/components/Faq";
@@ -22,7 +23,9 @@ import { orPreviewMarks, previewMode, PREVIEW_NOTE } from "@/lib/preview";
 export const revalidate = 300;
 
 export default async function Page() {
-  const [quotes, mosaic, newsNasa, wiki, clips, markRows] = await Promise.all([
+  const [seq, quotes, mosaic, newsNasa, wiki, clips, markRows] = await Promise.all([
+    // Resolved on the server so the hero has its frames before hydration.
+    readSequences(),
     getQuotes(),
     // Mosaic and newsroom draw from separate NASA queries so the same frame
     // never turns up in both.
@@ -74,7 +77,7 @@ export default async function Page() {
         </div>
       )}
 
-      <Hero />
+      <Hero seq={seq} />
       <Ticker quotes={quotes} />
 
       {/* ═══════════ INTELLIGENCE ═══════════ */}

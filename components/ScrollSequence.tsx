@@ -1,10 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { resolveSequence, type SeqSource } from "@/lib/hero-frames";
+import type { SeqVariant } from "@/lib/sequence-server";
 import { cropAt, heatAt } from "@/lib/hero-motion";
 
-interface Props {
+interface SeqSource {
+  id: string;
+  src: (i: number) => string;
+  frameCount: number;
+  width: number;
+  height: number;
+  budget: number;
+}
+
+export interface Props {
+  /** Resolved on the server. Null means the directory is genuinely empty. */
+  desktop: SeqVariant | null;
+  mobile: SeqVariant | null;
   /** Viewport heights of pinned scroll. */
   scrollLength?: number;
   mobileScrollLength?: number;
@@ -109,6 +121,8 @@ export default function ScrollSequence({
   scrollLength = 3.6,
   mobileScrollLength = 2.8,
   damping = 0.14,
+  desktop,
+  mobile,
   breakpoint = 820,
   onProgress,
   onFrame,
@@ -162,29 +176,45 @@ export default function ScrollSequence({
 
   /* ------------------------------------------------------------- resolve -- */
 
+  /**
+   * No resolution happens here any more — the server already did it. This only
+   * picks which of the two prop-supplied variants applies to this viewport and
+   * turns it into an indexable source.
+   *
+   * Narrow viewports take the portrait cut and fall back to landscape only if
+   * seq-m is empty; a landscape frame on a phone crops to about a third of its
+   * width, so whatever the render was composed around ends up off screen.
+   */
   useEffect(() => {
     if (narrow === null) return;
-    let dead = false;
-    setPhase("pending");
-    resolveSequence(narrow).then((s) => {
-      if (dead) return;
-      setSource(s);
-      if (!s) setPhase("none");
+
+    const picked = narrow ? (mobile ?? desktop) : (desktop ?? mobile);
+    if (!picked || picked.frameCount < 2) {
+      setSource(null);
+      setPhase("none");
+      return;
+    }
+
+    const pad = (n: number) => String(n).padStart(picked.pad, "0");
+
+    // `numbers` is present only when the sequence isn't a clean run from
+    // `first` — see sequence-server. When it's absent, arithmetic is exact.
+    const numberAt = picked.numbers
+      ? (i: number) => picked.numbers![Math.min(i, picked.numbers!.length - 1)]
+      : (i: number) => picked.first + i;
+
+    setSource({
+      id: `${picked.dir}/${picked.stem}*.${picked.ext}`,
+      src: (i) => `/${picked.dir}/${picked.stem}${pad(numberAt(i))}.${picked.ext}`,
+      frameCount: picked.frameCount,
+      width: picked.width,
+      height: picked.height,
+      // Decoded RGBA is the real cost, not the download. Sample evenly to this
+      // many and scrub the sample; the blend between neighbours covers the gap.
+      budget: Math.min(picked.frameCount, narrow ? 80 : 150),
     });
-
-    // Watchdog. A slow directory, a cold cache or a request that never settles
-    // should degrade to the poster rather than pinning three viewports of black
-    // behind a spinner. Six seconds is long enough that a real sequence on a
-    // slow connection still wins the race.
-    const bail = window.setTimeout(() => {
-      if (!dead && !painted.current) setPhase((prev) => (prev === "ok" ? prev : "none"));
-    }, 6000);
-
-    return () => {
-      dead = true;
-      window.clearTimeout(bail);
-    };
-  }, [narrow]);
+    setPhase("pending");
+  }, [narrow, desktop, mobile]);
 
   /* ---------------------------------------------------------------- load -- */
 

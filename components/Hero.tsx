@@ -3,6 +3,7 @@
 import { useState } from "react";
 import ScrollSequence from "./ScrollSequence";
 import Brand from "./Brand";
+import type { HeroSequences } from "@/lib/sequence-server";
 import {
   PLATES,
   SEG,
@@ -88,7 +89,7 @@ const DECK: Plate[] = [
 
 /* ------------------------------------------------------------- component -- */
 
-export default function Hero() {
+export default function Hero({ seq }: { seq: HeroSequences }) {
   const [p, setProgress] = useState(0);
   const [frame, setFrame] = useState({ i: 0, n: 0 });
 
@@ -97,8 +98,18 @@ export default function Hero() {
 
   return (
     <ScrollSequence
-      scrollLength={3.9}
-      mobileScrollLength={2.35}
+      desktop={seq.desktop}
+      mobile={seq.mobile}
+      /**
+       * Pin length.
+       *
+       * Was 3.9 viewports for three plates, which left roughly a third of a
+       * screen of scroll after the last one had finished saying anything —
+       * the dead stretch under the hero. Three plates need three viewports and
+       * a little overlap for the hand-offs, not four.
+       */
+      scrollLength={3.15}
+      mobileScrollLength={1.95}
       damping={0.13}
       onProgress={setProgress}
       onFrame={(i, n) => setFrame({ i, n })}
