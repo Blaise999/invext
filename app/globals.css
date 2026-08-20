@@ -97,97 +97,13 @@ input[type="number"] {
   color: var(--dim);
 }
 
-/* ---------------- hero overlay ---------------- */
-
-.hero { position: absolute; inset: 0; pointer-events: none; padding: 26px 32px; }
-.hero a, .hero button { pointer-events: auto; }
-
-.hero__nav { display: flex; justify-content: space-between; align-items: center; }
-
-.wordmark {
-  font-size: 19px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  text-transform: uppercase;
-}
-.wordmark span { color: var(--amber); }
-
-.hero__nav nav { display: flex; gap: 26px; }
-
-.hero__nav a {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--dim);
-  text-decoration: none;
-  transition: color var(--snap);
-}
-.hero__nav a:hover { color: var(--ink); }
-
-.hero__ver { position: absolute; left: 32px; top: 74px; color: var(--dim); }
-
-.hero__stage {
-  position: absolute;
-  left: 32px;
-  bottom: 84px;
-  right: 32px;
-  min-height: 340px;
-}
-
-.hero__panel {
-  position: absolute;
-  left: 0; bottom: 0;
-  max-width: min(620px, 100%);
-  will-change: opacity, transform;
-}
-
-.hero__eyebrow { color: var(--amber); text-transform: uppercase; margin: 0 0 16px; }
-
-.hero h1, .hero h2 {
-  margin: 0;
-  font-size: clamp(38px, 6vw, 84px);
-  line-height: 0.94;
-  letter-spacing: -0.04em;
-  text-transform: uppercase;
-  font-weight: 800;
-}
-
-.hero__lede {
-  margin: 22px 0 0;
-  max-width: 46ch;
-  font-size: clamp(15px, 1.3vw, 17.5px);
-  line-height: 1.5;
-  color: #c9c7c1;
-}
-
-.hero__actions { display: flex; gap: 12px; margin-top: 28px; flex-wrap: wrap; }
-
-.btn {
-  display: inline-block;
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  text-decoration: none;
-  color: var(--ink);
-  border: 1px solid var(--line);
-  background: transparent;
-  padding: 13px 22px;
-  cursor: pointer;
-  transition: background var(--snap), color var(--snap), border-color var(--snap);
-}
-.btn:hover { border-color: var(--amber); color: var(--amber); }
-
-.btn--solid { background: var(--amber); color: #0b0b0d; border-color: var(--amber); font-weight: 700; }
-.btn--solid:hover { background: var(--ink); border-color: var(--ink); color: #0b0b0d; }
-
-.hero__readout {
-  position: absolute;
-  right: 32px; bottom: 30px;
-  display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
-  color: #5d5c58; font-size: 10px; text-transform: uppercase;
-}
+/* ---------------- hero overlay ----------------
+   Legacy hero rules removed. Two generations of them were still live here:
+   `.hero h1` (0,1,1) was outranking `.plate__h` (0,1,0) further down the
+   file, so the rebuilt hero was rendering with the old type scale and the
+   old absolute positioning at the same time — which is what made it look
+   scattered rather than broken. The current hero lives in one block at the
+   foot of this file. ---------------------------------------------------- */
 
 /* ---------------- ticker ---------------- */
 
@@ -392,12 +308,6 @@ input[type="number"] {
 /* responsive */
 
 @media (max-width: 900px) {
-  .hero { padding: 18px 18px; }
-  .hero__nav nav { display: none; }
-  .hero__ver { left: 18px; top: 62px; }
-  .hero__stage { left: 18px; right: 18px; bottom: 70px; min-height: 300px; }
-  .hero__readout { display: none; }
-
   .sec, .cta { padding: 64px 18px; }
   .plist__btn { grid-template-columns: 1fr 28px; gap: 8px; padding: 20px 4px; }
   .plist__short, .plist__what { display: none; }
@@ -3704,212 +3614,6 @@ a.pcard:hover { border-color: #3a3a46; transform: translateY(-2px); }
 
 .wordmark { text-decoration: none; color: var(--ink); }
 
-/* ---------------- panel stack ---------------- */
-
-.hero__stage {
-  position: absolute;
-  left: 40px;
-  right: 40px;
-  bottom: 92px;
-  top: auto;
-  min-height: 400px;
-}
-
-.hero__panel {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: min(680px, 100%);
-  will-change: opacity, transform;
-  transform-origin: 0 100%;
-}
-
-.hero__eyebrow {
-  position: relative;
-  display: inline-block;
-  color: var(--amber);
-  text-transform: uppercase;
-  margin: 0 0 18px;
-  padding-bottom: 8px;
-}
-
-/* The signature: a rule that draws across as you move through the stage.
-   Scroll position made legible without borrowing a scrollbar's vocabulary. */
-.hero__rule {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 1px;
-  background: var(--amber);
-  transform-origin: 0 50%;
-  display: block;
-}
-
-.hero__h {
-  margin: 0;
-  font-size: clamp(38px, 5.6vw, 82px);
-  line-height: 0.93;
-  letter-spacing: -0.042em;
-  text-transform: uppercase;
-  font-weight: 800;
-}
-
-.hero__em {
-  font-family: var(--serif);
-  font-style: italic;
-  font-weight: 400;
-  text-transform: none;
-  color: var(--amber);
-  letter-spacing: -0.015em;
-}
-
-.hero__lede {
-  margin: 22px 0 0;
-  max-width: 52ch;
-  font-size: clamp(14.5px, 1.15vw, 16.5px);
-  line-height: 1.6;
-  color: #c2c0ba;
-}
-
-.hero__actions { display: flex; gap: 12px; margin-top: 26px; flex-wrap: wrap; }
-
-/* readout becomes a small definition strip under the actions */
-.hero__readout {
-  position: static;
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  gap: 0;
-  margin: 30px 0 0;
-  padding-top: 16px;
-  border-top: 1px solid rgba(240,238,233,0.1);
-  flex-wrap: wrap;
-}
-.hero__readout > div {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding-right: 26px;
-  margin-right: 26px;
-  border-right: 1px solid rgba(240,238,233,0.08);
-}
-.hero__readout > div:last-child { border-right: 0; margin-right: 0; padding-right: 0; }
-.hero__readout dt { color: var(--amber); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; }
-.hero__readout dd { margin: 0; color: #86857f; font-size: 10px; letter-spacing: 0.06em; }
-
-/* ---------------- instrument rail ---------------- */
-
-.rig {
-  position: absolute;
-  right: 40px;
-  bottom: 92px;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-  align-items: flex-end;
-}
-
-.rig__i {
-  display: grid;
-  grid-template-columns: auto 2px;
-  align-items: center;
-  gap: 14px;
-  opacity: 0.4;
-  transition: opacity 320ms var(--snap);
-}
-.rig__i.is-on { opacity: 1; }
-
-.rig__no {
-  grid-row: 1;
-  color: var(--dim);
-  font-size: 10px;
-  letter-spacing: 0.16em;
-  text-align: right;
-}
-.rig__i.is-on .rig__no { color: var(--amber); }
-
-.rig__lab {
-  grid-row: 2;
-  grid-column: 1;
-  color: #55545a;
-  font-size: 8.5px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  text-align: right;
-}
-.rig__i.is-on .rig__lab { color: var(--dim); }
-
-.rig__track {
-  grid-row: 1 / span 2;
-  grid-column: 2;
-  width: 2px;
-  height: 40px;
-  background: rgba(240,238,233,0.14);
-  display: block;
-  position: relative;
-  overflow: hidden;
-}
-.rig__fill {
-  position: absolute;
-  inset: 0;
-  background: var(--amber);
-  transform-origin: 50% 0;
-  display: block;
-}
-
-/* ---------------- scroll cue ---------------- */
-
-.hero__cue {
-  position: absolute;
-  left: 40px;
-  bottom: 34px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: #55545a;
-  text-transform: uppercase;
-  font-size: 9.5px;
-  letter-spacing: 0.2em;
-}
-.hero__cue i {
-  display: block;
-  width: 42px;
-  height: 1px;
-  background: linear-gradient(to right, #55545a, transparent);
-}
-
-@media (max-width: 900px) {
-  .hero { padding: 18px 20px; }
-  .hero__nav nav { display: none; }
-  .hero__stage { left: 20px; right: 20px; bottom: 74px; min-height: 340px; }
-  .hero__panel { width: 100%; }
-  .hero__readout > div { padding-right: 16px; margin-right: 16px; }
-  .hero__readout > div:nth-child(3) { display: none; }
-  .rig { right: 20px; bottom: 74px; gap: 14px; }
-  .rig__track { height: 28px; }
-  .hero__cue { left: 20px; bottom: 26px; }
-  .hero__lede { max-width: none; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hero__panel { transition: none !important; }
-}
-
-
-/* ════════════════════════════════════════════════════════════
-   ZONES — landing section shell
-   ════════════════════════════════════════════════════════════ */
-
-.zone {
-  padding: 108px 40px;
-  max-width: 1400px;
-  margin: 0 auto;
-  /* clip, not hidden: cards deliberately overrun the edges below, and
-     `hidden` would kill position:sticky in any descendant. */
-  overflow-x: clip;
-}
 
 .zone--alt {
   background: var(--bg-alt);
@@ -4805,4 +4509,149 @@ html, body {
   .seq__canvas { filter: none; transform: none; }
   .ap__blade, .ap__cut { display: none; }
   .plate { transition: none; }
+}
+
+/* ============================================================================
+   HERO — FIT, LOCKUP, POSTER
+   ----------------------------------------------------------------------------
+   Follow-up to the block above, fixing what the screenshots showed:
+
+   * The plate was taller than the stage. On a 1920x800 window the headline,
+     lede, buttons and readout came to more than 800px, and a bottom-aligned
+     block that doesn't fit overflows upward — straight through the masthead.
+     That collision is what read as "scattered". Type now scales on the shorter
+     axis, and the deck reserves the masthead and transport bands so the plate
+     can only ever occupy what's left.
+
+   * The wordmark was six characters of body text. It's the only brand mark on
+     the page, so it gets an actual lockup.
+
+   * A missing sequence rendered as black. It renders as a poster now.
+   ========================================================================= */
+
+/* --------------------------------------------------------------- lockup -- */
+
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.02em;
+}
+
+/* The mark: a square gate with a slit through it — the same aperture the
+   transitions use, so the logo and the motion are the same idea. */
+.wordmark::before {
+  content: "";
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border: 1.5px solid var(--amber);
+  background:
+    linear-gradient(to bottom, transparent calc(50% - 1px), var(--amber) calc(50% - 1px), var(--amber) calc(50% + 1px), transparent calc(50% + 1px));
+  transition: transform var(--snap);
+}
+.wordmark:hover::before { transform: rotate(45deg); }
+.wordmark span { color: var(--amber); }
+
+/* ------------------------------------------------------------------ fit -- */
+
+.hero__deck {
+  /* Reserve the two fixed bands. The plate lives strictly between them, so it
+     can never reach the masthead however long the copy runs. */
+  padding: clamp(78px, 11vh, 104px) 0 clamp(74px, 10vh, 96px);
+  align-items: end;
+}
+
+.plate {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-height: 100%;
+  padding-bottom: 0;
+}
+.plate--02 { align-items: flex-end; }
+
+@media (max-width: 820px) {
+  .plate, .plate--02, .plate--03 { align-items: flex-start; padding-bottom: 0; }
+}
+
+/**
+ * Type scales on whichever axis is tighter.
+ *
+ * `5.4vw` alone is why a wide short window broke: at 1920 wide it resolves to
+ * 104px regardless of there being 800px of height to work with. Taking the min
+ * against a vh term means a laptop in a short window gets smaller type instead
+ * of an overflowing block.
+ */
+.plate__h { font-size: clamp(30px, min(5.2vw, 9.4vh), 72px); }
+.plate__lede { font-size: clamp(13px, min(1.05vw, 2.1vh), 16px); margin-top: min(22px, 2.4vh); }
+.plate__actions { margin-top: min(26px, 3vh); }
+.plate__readout { margin-top: min(30px, 3.4vh); padding-top: min(14px, 1.6vh); }
+
+/* Short windows: the readout is the first thing to go. It's a supporting
+   detail, and losing it is better than losing the buttons. */
+@media (max-height: 660px) and (min-width: 821px) {
+  .plate__readout { display: none; }
+  .plate__lede { -webkit-line-clamp: 3; line-clamp: 3; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+}
+@media (max-height: 520px) {
+  .plate__lede { display: none; }
+  .hero__deck { padding-top: 68px; }
+}
+
+/* --------------------------------------------------------------- poster -- */
+
+.seq__stage.is-poster { background: #060608; }
+
+.poster { position: absolute; inset: 0; overflow: hidden; }
+
+/* Two slow, offset washes. Nothing here is fast enough to notice as animation;
+   it reads as depth, which is all the copy needs behind it. */
+.poster__a,
+.poster__b {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.5;
+}
+.poster__a {
+  width: 62vmax; height: 62vmax;
+  right: -14vmax; top: -20vmax;
+  background: radial-gradient(circle, rgba(232, 163, 61, 0.34), transparent 68%);
+  animation: poster-a 34s ease-in-out infinite alternate;
+}
+.poster__b {
+  width: 48vmax; height: 48vmax;
+  left: -12vmax; bottom: -18vmax;
+  background: radial-gradient(circle, rgba(180, 105, 26, 0.3), transparent 70%);
+  animation: poster-b 44s ease-in-out infinite alternate;
+}
+
+/* A faint measured grid — the closest thing to an instrument the page has, and
+   it makes the empty state look specified rather than unfinished. */
+.poster__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(240, 238, 233, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(240, 238, 233, 0.045) 1px, transparent 1px);
+  background-size: 88px 88px;
+  mask-image: radial-gradient(ellipse at 50% 40%, #000 20%, transparent 78%);
+}
+
+@keyframes poster-a {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(-6vmax, 5vmax, 0) scale(1.14); }
+}
+@keyframes poster-b {
+  from { transform: translate3d(0, 0, 0) scale(1.08); }
+  to   { transform: translate3d(5vmax, -4vmax, 0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .poster__a, .poster__b { animation: none; }
 }

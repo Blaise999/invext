@@ -107,6 +107,16 @@ export default function ScrollSequence({
 
   const [narrow, setNarrow] = useState<boolean | null>(null);
   const [source, setSource] = useState<SeqSource | null>(null);
+  /**
+   * pending — still asking the server what's on disk
+   * ok      — a sequence resolved and at least one frame has painted
+   * none    — nothing usable; the poster carries the hero instead
+   *
+   * Tracked explicitly because the old code had no way to distinguish "still
+   * loading" from "there is nothing to load", so an empty directory rendered
+   * as a black rectangle under a progress readout stuck at 100%.
+   */
+  const [phase, setPhase] = useState<"pending" | "ok" | "none">("pending");
   const [loaded, setLoaded] = useState(0);
   const [firstPaint, setFirstPaint] = useState(false);
 
@@ -127,11 +137,24 @@ export default function ScrollSequence({
   useEffect(() => {
     if (narrow === null) return;
     let dead = false;
+    setPhase("pending");
     resolveSequence(narrow).then((s) => {
-      if (!dead) setSource(s);
+      if (dead) return;
+      setSource(s);
+      if (!s) setPhase("none");
     });
+
+    // Watchdog. A slow directory, a cold cache or a request that never settles
+    // should degrade to the poster rather than pinning three viewports of black
+    // behind a spinner. Six seconds is long enough that a real sequence on a
+    // slow connection still wins the race.
+    const bail = window.setTimeout(() => {
+      if (!dead && !painted.current) setPhase((prev) => (prev === "ok" ? prev : "none"));
+    }, 6000);
+
     return () => {
       dead = true;
+      window.clearTimeout(bail);
     };
   }, [narrow]);
 
@@ -212,12 +235,17 @@ export default function ScrollSequence({
         if (!painted.current) {
           painted.current = true;
           setFirstPaint(true);
+          setPhase("ok");
         }
       } catch {
         // A dropped frame is survivable - nearest-key lookup covers the gap.
       }
       done++;
       setLoaded(done / order.length);
+
+      // Every frame attempted and none of them decoded: the manifest and the
+      // files disagree. Fail over to the poster instead of reporting 100%.
+      if (done === order.length && !painted.current) setPhase("none");
     };
 
     // Small pool: six in flight keeps the connection busy without starving
@@ -389,12 +417,31 @@ export default function ScrollSequence({
        */
       style={{ height: `${len * 100}dvh` }}
     >
-      <div ref={stageRef} className="seq__stage">
+      <div ref={stageRef} className={`seq__stage${phase === "none" ? " is-poster" : ""}`}>
         <canvas ref={canvasRef} className="seq__canvas" aria-hidden="true" />
+
+        {/**
+          * Poster. Shown only when there is no sequence to scrub.
+          *
+          * It is a designed state, not a placeholder: a slow aurora over the
+          * brand black, driven by the same scroll progress the frames would
+          * have used, so the hero still has motion and the copy still has
+          * something to sit on. The page should never look broken because an
+          * asset directory is empty.
+          */}
+        {phase === "none" && (
+          <div className="poster" aria-hidden="true">
+            <i className="poster__a" />
+            <i className="poster__b" />
+            <span className="poster__grid" />
+          </div>
+        )}
+
         <div className="seq__grain" aria-hidden="true" />
         {children}
 
-        {!firstPaint && (
+        {/* Boot readout only while there is genuinely something in flight. */}
+        {phase === "pending" && !firstPaint && (
           <div className="seq__boot">
             <span className="mono">Loading sequence</span>
             <span className="mono seq__bootN">
