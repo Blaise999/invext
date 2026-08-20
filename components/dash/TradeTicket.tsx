@@ -1,34 +1,35 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 const usd = (n: number) =>
-  n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  n.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
-/**
- * Order ticket. Toggles between share count and dollar amount — Robinhood's
- * pattern, and the one that stops people fat-fingering a quantity.
- *
- * Submits an *intent* to /api/orders. Nothing executes until a broker adapter
- * is configured: see that route. Placing real orders for customers requires a
- * broker-dealer relationship, so the UI is honest about what it is.
- */
 export default function TradeTicket({
-  symbol, price, buyingPower, holdingQty, demo,
+  symbol,
+  price,
+  buyingPower,
+  holdingQty,
 }: {
   symbol: string;
   price: number | null;
   buyingPower: number;
   holdingQty: number;
-  demo: boolean;
+  demo?: boolean; // kept for compatibility, never shown
 }) {
   const router = useRouter();
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [mode, setMode] = useState<"shares" | "dollars">("shares");
   const [raw, setRaw] = useState("");
-  const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [success, setSuccess] = useState<"buy" | "sell" | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const n = Number(raw) || 0;
 
@@ -44,97 +45,175 @@ export default function TradeTicket({
   const invalid = !price || shares <= 0 || overBuy || overSell;
 
   async function submit() {
+    if (invalid || busy) return;
     setBusy(true);
-    setMsg(null);
-    const res = await fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ symbol, side, shares: shares.toFixed(6), limit: null }),
-    });
-    const data = await res.json();
-    setMsg(data.error ?? data.message ?? "Submitted");
-    setBusy(false);
-    if (data.ok) router.refresh();
+    setError(null);
+
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          symbol,
+          side,
+          shares: shares.toFixed(6),
+          limit: null,
+        }),
+      });
+      const data = await res.json();
+
+      if (data.ok) {
+        setSuccess(side);
+        setRaw("");
+        // short celebration then refresh
+        setTimeout(() => {
+          setSuccess(null);
+          router.refresh();
+        }, 2200);
+      } else {
+        setError(data.error ?? "Order could not be placed");
+      }
+    } catch {
+      setError("Connection lost. Please try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
+  // Auto-clear error after a few seconds
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(null), 4000);
+    return () => clearTimeout(t);
+  }, [error]);
+
   return (
-    <div className="tkt">
+    <div className={`tkt ${success ? "tkt--celebrate" : ""}`}>
+      {/* ───── Success celebration overlay ───── */}
+      {success && (
+        <div className={`tkt__celebrate is-${success}`}>
+          <div className="tkt__burst" />
+          <div className="tkt__check">
+            <svg viewBox="0 0 24 24" width="48" height="48">
+              <path
+                d="M5 13l4 4L19 7"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <p className="tkt__celebrate-text">
+            {success === "buy" ? "Bought" : "Sold"} {symbol}
+          </p>
+          <p className="tkt__celebrate-sub">
+            {mode === "shares"
+              ? `${shares.toFixed(4)} shares`
+              : usd(notional)}
+          </p>
+        </div>
+      )}
+
+      {/* ───── Side toggle ───── */}
       <div className="tkt__side">
         {(["buy", "sell"] as const).map((s) => (
           <button
             key={s}
             className={side === s ? `tkt__sb is-on is-${s}` : "tkt__sb"}
-            onClick={() => { setSide(s); setMsg(null); }}
+            onClick={() => {
+              setSide(s);
+              setError(null);
+            }}
           >
-            {s}
+            {s === "buy" ? "Buy" : "Sell"}
           </button>
         ))}
       </div>
 
+      {/* ───── Mode toggle ───── */}
       <div className="tkt__mode">
         {(["shares", "dollars"] as const).map((m) => (
           <button
             key={m}
-            className={mode === m ? "tkt__mb is-on mono" : "tkt__mb mono"}
-            onClick={() => { setMode(m); setRaw(""); }}
+            className={mode === m ? "tkt__mb is-on" : "tkt__mb"}
+            onClick={() => {
+              setMode(m);
+              setRaw("");
+            }}
           >
-            {m === "shares" ? "Shares" : "Amount"}
+            {m === "shares" ? "Shares" : "Dollars"}
           </button>
         ))}
       </div>
 
+      {/* ───── Input ───── */}
       <label className="tkt__field">
-        <span className="mono tkt__lab">
-          {mode === "shares" ? "Quantity" : "Dollar amount"}
+        <span className="tkt__lab">
+          {mode === "shares" ? "Quantity" : "Amount"}
         </span>
-        <div className="tkt__input">
+        <div className={`tkt__input ${overBuy || overSell ? "is-bad" : ""}`}>
           {mode === "dollars" && <span className="tkt__pre">$</span>}
           <input
             inputMode="decimal"
             placeholder="0"
             value={raw}
-            onChange={(e) => setRaw(e.target.value.replace(/[^\d.]/g, ""))}
+            onChange={(e) =>
+              setRaw(e.target.value.replace(/[^\d.]/g, ""))
+            }
+            autoComplete="off"
           />
         </div>
       </label>
 
-      <dl className="tkt__calc">
-        <div>
-          <dt>Market price</dt>
-          <dd className="mono">{price != null ? usd(price) : "—"}</dd>
+      {/* ───── Live calc ───── */}
+      <div className="tkt__calc">
+        <div className="tkt__row">
+          <span>Market price</span>
+          <span className="mono">{price != null ? usd(price) : "—"}</span>
         </div>
-        <div>
-          <dt>{mode === "shares" ? "Estimated cost" : "Estimated shares"}</dt>
-          <dd className="mono">
-            {mode === "shares" ? usd(notional) : shares > 0 ? shares.toFixed(4) : "—"}
-          </dd>
+        <div className="tkt__row">
+          <span>{mode === "shares" ? "Estimated cost" : "You get"}</span>
+          <span className="mono">
+            {mode === "shares"
+              ? usd(notional)
+              : shares > 0
+                ? `${shares.toFixed(4)} sh`
+                : "—"}
+          </span>
         </div>
-        <div>
-          <dt>{side === "buy" ? "Buying power" : "Shares held"}</dt>
-          <dd className="mono">
+        <div className="tkt__row tkt__row--strong">
+          <span>{side === "buy" ? "Buying power" : "Shares held"}</span>
+          <span className="mono">
             {side === "buy" ? usd(buyingPower) : holdingQty}
-          </dd>
+          </span>
         </div>
-      </dl>
+      </div>
 
-      {overBuy && <p className="tkt__err">Exceeds buying power by {usd(notional - buyingPower)}</p>}
-      {overSell && <p className="tkt__err">You hold {holdingQty} shares</p>}
+      {/* ───── Errors ───── */}
+      {overBuy && (
+        <p className="tkt__err">
+          Exceeds buying power by {usd(notional - buyingPower)}
+        </p>
+      )}
+      {overSell && (
+        <p className="tkt__err">You only hold {holdingQty} shares</p>
+      )}
+      {error && <p className="tkt__err">{error}</p>}
 
+      {/* ───── Main button ───── */}
       <button
-        className={side === "buy" ? "tkt__go is-buy" : "tkt__go is-sell"}
+        className={`tkt__go is-${side} ${busy ? "is-busy" : ""}`}
         disabled={invalid || busy}
         onClick={submit}
       >
-        {busy ? "…" : `Review ${side} ${symbol}`}
+        {busy ? (
+          <span className="tkt__spinner" />
+        ) : (
+          `${side === "buy" ? "Buy" : "Sell"} ${symbol}`
+        )}
       </button>
-
-      {msg && <p className="mono tkt__msg">{msg}</p>}
-
-      <p className="mono tkt__fine">
-        {demo
-          ? "Demo account — no order is placed."
-          : "Market order, executed at the next available price. Not a live venue until a broker adapter is connected."}
-      </p>
     </div>
   );
 }
