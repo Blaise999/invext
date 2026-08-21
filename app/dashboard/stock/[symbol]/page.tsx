@@ -6,7 +6,7 @@ import { privateListingFor } from "@/lib/private";
 import { privateCos } from "@/lib/data";
 import { outlookFor, OUTLOOK_DISCLAIMER } from "@/lib/listing";
 import { marksFor, type Mark } from "@/lib/ledger";
-import { orPreviewMarks } from "@/lib/preview";
+import { orPrivateMarks } from "@/lib/preview";
 import Logo from "@/components/dash/Logo";
 import PortfolioPanel from "@/components/dash/PortfolioPanel";
 import TradeTicket from "@/components/dash/TradeTicket";
@@ -64,9 +64,9 @@ export default async function Stock({
   if (!q && !priv) notFound();
 
   const recorded = priv ? await marksFor(symbol) : [];
-  const { marks, illustrative } = priv
-    ? orPreviewMarks(symbol, recorded)
-    : { marks: [] as Mark[], illustrative: false };
+const { marks, isPrivate } = priv
+  ? orPrivateMarks(symbol, recorded)
+  : { marks: [] as Mark[], isPrivate: false };
 
   const held = v.positions.find((p) => p.symbol.toUpperCase() === symbol);
   const qty = held?.quantity ?? 0;
@@ -265,8 +265,8 @@ export default async function Stock({
             <div>
               <dt>Data source</dt>
               <dd className="mono">
-                {q?.source ?? mark?.source ?? "—"}
-                {illustrative ? " · illustrative" : ""}
+              {q?.source ?? mark?.source ?? "—"}
+{isPrivate ? " · private mark" : ""}
               </dd>
             </div>
           </dl>

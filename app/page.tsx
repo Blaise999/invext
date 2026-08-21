@@ -45,6 +45,7 @@ export default async function Page() {
 
   const stories = placeImages(NEWS, wiki, newsNasa);
 
+  // Map isPrivate → illustrative so PrivateList's existing type still matches
   const latestMarks = Object.fromEntries(
     markRows.map(([symbol, { marks, isPrivate }]) => {
       const last = marks[marks.length - 1];
@@ -56,7 +57,7 @@ export default async function Page() {
               price: last.price,
               effective_at: last.effective_at,
               basis: last.basis,
-              isPrivate,
+              illustrative: isPrivate,
             }
           : undefined,
       ];
