@@ -117,6 +117,12 @@ const DECK: Plate[] = [
 
 /* ------------------------------------------------------------- component -- */
 
+if (process.env.NODE_ENV !== "production" && DECK.length !== PLATES) {
+  console.warn(
+    `hero: DECK has ${DECK.length} plates, motion model expects ${PLATES} (SEG=${SEG})`
+  );
+}
+
 export default function Hero() {
   const [p, setProgress] = useState(0);
   const [frame, setFrame] = useState({ i: 0, n: 0 });
@@ -135,30 +141,52 @@ export default function Hero() {
       onProgress={setProgress}
       onFrame={(i, n) => setFrame({ i, n })}
     >
-      <div className="hero">
+      <div className="hero" style={{ position: "relative", zIndex: 1 }}>
         {/* ---------------- masthead ---------------- */}
         <header className="hero__nav">
-          <a className="wordmark" href="/" aria-label="InveXt home">
+          <a
+            className="wordmark"
+            href="/"
+            aria-label="InveXt home"
+            style={{ color: "inherit", textDecoration: "none" }}
+          >
             <Brand size={26} />
           </a>
           <nav aria-label="Primary">
-            <a href="#market">Markets</a>
-            <a href="#private">Private</a>
-            <a href="#intelligence">Intelligence</a>
-            <a href="#argument">Thesis</a>
-            <a href="/dashboard">Dashboard</a>
+            <a href="#market" style={{ color: "inherit", textDecoration: "none" }}>
+              Markets
+            </a>
+            <a href="#private" style={{ color: "inherit", textDecoration: "none" }}>
+              Private
+            </a>
+            <a
+              href="#intelligence"
+              style={{ color: "inherit", textDecoration: "none" }}
+            >
+              Intelligence
+            </a>
+            <a href="#argument" style={{ color: "inherit", textDecoration: "none" }}>
+              Thesis
+            </a>
+            <a href="/dashboard" style={{ color: "inherit", textDecoration: "none" }}>
+              Dashboard
+            </a>
           </nav>
         </header>
 
         {/* ---------------- aperture blades ---------------- */}
-        <div className="ap" aria-hidden="true">
+        <div
+          className="ap"
+          aria-hidden="true"
+          style={{ position: "absolute", zIndex: 0, pointerEvents: "none" }}
+        >
           <i className="ap__blade ap__blade--t" />
           <i className="ap__blade ap__blade--b" />
           <i className="ap__cut" />
         </div>
 
         {/* ---------------- plates ---------------- */}
-        <div className="hero__deck">
+        <div className="hero__deck" style={{ position: "relative", zIndex: 10 }}>
           {DECK.map((plate, i) => {
             const local = localOf(p, i);
             const first = i === 0;
@@ -174,19 +202,21 @@ export default function Hero() {
                 data-on={live ? "true" : undefined}
                 data-off={off ? "true" : undefined}
                 style={{
-                  // Fade the whole plate so two plates never stack as solid type
                   opacity: presence,
-                  // Active plate always on top during hand-off
                   zIndex: i === active ? 3 : live ? 2 : 1,
                   transform: `translate3d(0, ${(1 - enter) * 18 + (1 - exit) * -18}px, 0)`,
                   pointerEvents: live ? "auto" : "none",
                   visibility: off ? "hidden" : "visible",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1.5rem",
+                  position: "relative",
                 }}
                 aria-hidden={!live}
               >
                 <p
                   className="plate__eyebrow mono"
-                  style={{ clipPath: wipe(enter, exit) }}
+                  style={{ clipPath: wipe(enter, exit), margin: 0 }}
                 >
                   <span className="plate__no">{plate.index}</span>
                   {plate.eyebrow}
@@ -197,12 +227,25 @@ export default function Hero() {
                   />
                 </p>
 
-                <h1 className="plate__h">
+                <h1
+                  className="plate__h"
+                  style={{
+                    margin: 0,
+                    lineHeight: "1.2",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.25rem",
+                  }}
+                >
                   {plate.head.map((line, k) => (
                     <span
                       key={k}
                       className="plate__line"
-                      style={{ clipPath: wipe(stagger(enter, k), exit) }}
+                      style={{
+                        clipPath: wipe(stagger(enter, k), exit),
+                        display: "block",
+                        whiteSpace: "nowrap",
+                      }}
                     >
                       <span className={line.em ? "plate__em" : undefined}>
                         {line.text}
@@ -213,7 +256,11 @@ export default function Hero() {
 
                 <p
                   className="plate__lede"
-                  style={{ clipPath: wipe(stagger(enter, 2), exit) }}
+                  style={{
+                    clipPath: wipe(stagger(enter, 2), exit),
+                    margin: 0,
+                    lineHeight: "1.5",
+                  }}
                 >
                   <span className="only-wide">{plate.lede}</span>
                   <span className="only-narrow">{plate.ledeShort}</span>
@@ -221,7 +268,11 @@ export default function Hero() {
 
                 <div
                   className="plate__actions"
-                  style={{ clipPath: wipe(stagger(enter, 3), exit) }}
+                  style={{
+                    clipPath: wipe(stagger(enter, 3), exit),
+                    display: "flex",
+                    gap: "1rem",
+                  }}
                 >
                   {plate.actions.map((a) => (
                     <a
@@ -229,6 +280,12 @@ export default function Hero() {
                       href={a.href}
                       className={a.solid ? "btn btn--solid" : "btn"}
                       tabIndex={live ? 0 : -1}
+                      style={{
+                        color: a.solid ? "#ffffff" : "inherit",
+                        textDecoration: "none",
+                        display: "inline-flex",
+                        alignItems: "center",
+                      }}
                     >
                       {a.label}
                     </a>
@@ -264,6 +321,7 @@ export default function Hero() {
               </li>
             ))}
           </ol>
+
           <p className="mono tp__frame">
             {frame.n > 0
               ? `FRAME ${String(frame.i + 1).padStart(4, "0")} / ${String(frame.n).padStart(4, "0")}`
@@ -282,11 +340,5 @@ export default function Hero() {
         </div>
       </div>
     </ScrollSequence>
-  );
-}
-
-if (process.env.NODE_ENV !== "production" && DECK.length !== PLATES) {
-  console.warn(
-    `hero: DECK has ${DECK.length} plates, motion model expects ${PLATES} (SEG=${SEG})`
   );
 }
