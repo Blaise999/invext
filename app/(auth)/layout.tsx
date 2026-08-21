@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Brand from "@/components/Brand";
 import AuthAside from "@/components/auth/AuthAside";
-import { previewMode } from "@/lib/preview";
+import { privateMarksEnabled } from "@/lib/preview";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,14 +11,16 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <Link href="/" className="brandlink" aria-label="InveXt home">
             <Brand size={26} />
           </Link>
-          {previewMode() && <span className="mono auth__pv">Preview build</span>}
+          {privateMarksEnabled() && (
+            <span className="mono auth__pv">Private marks</span>
+          )}
         </div>
 
         <div className="auth__body">{children}</div>
 
         <p className="auth__foot mono">
-          Open to United States residents, 18 and over. Coverage of a private
-          company opens only once an agreement with that company is in place.
+          Open to United States residents, 18 and over. Private company coverage
+          becomes available as agreements are put in place.
         </p>
       </div>
 
