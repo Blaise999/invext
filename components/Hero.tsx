@@ -2,23 +2,6 @@
 
 import { useState } from "react";
 import ScrollSequence, { type SeqConfig } from "./ScrollSequence";
-
-/* ---------------------------------------------------------------- frames --
-   Where the renders live. Change these when you re-export.
-
-     /public/seq/frame_001.webp    …  frame_1000.webp
-     /public/seq-m/frame_001.webp  …  frame_1000.webp
-
-   pad is 3, not 4: "%03d" pads to a minimum of three, so frame 1000 keeps its
-   four digits. padStart(3) gives "001" and "1000" — both correct.            */
-
-const SEQ_DESKTOP: SeqConfig = {
-  dir: "seq", stem: "frame_", ext: "webp", pad: 3, first: 1, frameCount: 1000,
-};
-
-const SEQ_MOBILE: SeqConfig = {
-  dir: "seq-m", stem: "frame_", ext: "webp", pad: 3, first: 1, frameCount: 1000,
-};
 import Brand from "./Brand";
 import {
   PLATES,
@@ -32,15 +15,29 @@ import {
   wipe,
 } from "@/lib/hero-motion";
 
-/* ------------------------------------------------------------------ copy -- */
+const SEQ_DESKTOP: SeqConfig = {
+  dir: "seq",
+  stem: "frame_",
+  ext: "webp",
+  pad: 3,
+  first: 1,
+  frameCount: 1230,
+};
+
+const SEQ_MOBILE: SeqConfig = {
+  dir: "seq-m",
+  stem: "frame_",
+  ext: "webp",
+  pad: 3,
+  first: 1,
+  frameCount: 164,
+};
 
 interface Plate {
   index: string;
   eyebrow: string;
-  /** One entry per rendered line. `em` sets the line in the display serif. */
   head: { text: string; em?: boolean }[];
   lede: string;
-  /** Shorter cut used on phones, where a four-line lede buries the buttons. */
   ledeShort: string;
   actions: { label: string; href: string; solid?: boolean }[];
   readout: [string, string][];
@@ -103,8 +100,6 @@ const DECK: Plate[] = [
   },
 ];
 
-/* ------------------------------------------------------------- component -- */
-
 export default function Hero() {
   const [p, setProgress] = useState(0);
   const [frame, setFrame] = useState({ i: 0, n: 0 });
@@ -116,27 +111,14 @@ export default function Hero() {
     <ScrollSequence
       desktop={SEQ_DESKTOP}
       mobile={SEQ_MOBILE}
-      /**
-       * Pin length.
-       *
-       * Three plates, so roughly one viewport each plus a little for the
-       * hand-offs. Anything beyond that is the dead stretch under the hero —
-       * scroll that changes nothing while the reader waits for the page to
-       * move on. Shorter on a phone, where the same distance takes twice the
-       * thumb work.
-       */
-      scrollLength={2.6}
-      mobileScrollLength={1.55}
-      damping={0.13}
+      scrollLength={2.4}
+      mobileScrollLength={1.5}
+      damping={0.14}
       onProgress={setProgress}
       onFrame={(i, n) => setFrame({ i, n })}
     >
       <div className="hero" style={{ "--heat": heat } as React.CSSProperties}>
-        {/* ---------------- masthead ---------------- */}
         <header className="hero__nav">
-          {/* The actual mark — same component the dashboard header uses, so the
-              logo is one thing in one place rather than a CSS approximation
-              that drifts from it. */}
           <a className="wordmark" href="/" aria-label="InveXt home">
             <Brand size={26} />
           </a>
@@ -149,18 +131,12 @@ export default function Hero() {
           </nav>
         </header>
 
-        {/* ---------------- aperture blades ----------------
-            Two horizontal blades close toward the centre at each hand-off and
-            open again once the new plate has landed. It is the only moment in
-            the hero that draws attention to itself, which is why it lasts about
-            a fifth of a second and does nothing at all in between. */}
         <div className="ap" aria-hidden="true">
           <i className="ap__blade ap__blade--t" />
           <i className="ap__blade ap__blade--b" />
           <i className="ap__cut" />
         </div>
 
-        {/* ---------------- plates ---------------- */}
         <div className="hero__deck">
           {DECK.map((plate, i) => {
             const local = localOf(p, i);
@@ -174,9 +150,6 @@ export default function Hero() {
                 key={plate.index}
                 className={`plate plate--${plate.index}`}
                 style={{
-                  // The block itself only translates. Every reveal below is a
-                  // clip, so nothing on this plate fades — which is what keeps
-                  // the type crisp instead of ghosting through the canvas.
                   transform: `translate3d(0, ${(1 - enter) * 26 + (1 - exit) * -30}px, 0)`,
                   pointerEvents: live ? "auto" : "none",
                   visibility: presence < 0.02 ? "hidden" : "visible",
@@ -236,11 +209,6 @@ export default function Hero() {
           })}
         </div>
 
-        {/* ---------------- transport ----------------
-            Replaces the old vertical rail. It reports the thing the hero is
-            actually doing — which plate is up, and where in the render we are —
-            rather than decorating the edge of the screen with tick marks. On a
-            phone it collapses to the segment bar alone. */}
         <div className="tp" aria-hidden="true">
           <ol className="tp__segs">
             {DECK.map((plate, i) => (
@@ -257,7 +225,6 @@ export default function Hero() {
           </p>
         </div>
 
-        {/* ---------------- scroll cue ---------------- */}
         <div className="hero__cue mono" style={{ opacity: clamp01(1 - p * 16) }} aria-hidden="true">
           <span>Scroll</span>
           <i />
@@ -267,7 +234,6 @@ export default function Hero() {
   );
 }
 
-/* Keeps the segment maths honest if PLATES and DECK ever drift apart. */
 if (process.env.NODE_ENV !== "production" && DECK.length !== PLATES) {
   console.warn(`hero: DECK has ${DECK.length} plates, motion model expects ${PLATES} (SEG=${SEG})`);
 }
