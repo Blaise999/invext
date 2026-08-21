@@ -4,7 +4,7 @@ import { PRIVATE_LISTINGS } from "@/lib/private";
 import { LISTING_OUTLOOK } from "@/lib/listing";
 import MarketBoard from "@/components/dash/MarketBoard";
 import { marksFor } from "@/lib/ledger";
-import { orPreviewMarks } from "@/lib/preview";
+import { orPrivateMarks } from "@/lib/preview";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +24,7 @@ export default async function Market() {
   const privateRows = await Promise.all(
     PRIVATE_LISTINGS.map(async (p) => {
       const recorded = await marksFor(p.symbol).catch(() => []);
-      const { marks, illustrative } = orPreviewMarks(p.symbol, recorded);
+      const { marks, isPrivate } = orPrivateMarks(p.symbol, recorded);
       const last = marks[marks.length - 1];
       const prev = marks[marks.length - 2];
       const qty = qtyOf(p.symbol);
@@ -38,7 +38,8 @@ export default async function Market() {
         markedAt: last?.effective_at ?? null,
         basis: last?.basis ?? null,
         listing: LISTING_OUTLOOK[p.symbol]?.window ?? null,
-        illustrative,
+        // MarketBoard still types this field as `illustrative`
+        illustrative: isPrivate,
         held: qty > 0,
         heldQty: qty,
       };
@@ -54,7 +55,7 @@ export default async function Market() {
       change: q.change,
       changeAbs: q.changeAbs,
       series: q.series.slice(-60),
-      illustrative: q.source === "preview",
+      illustrative: false,
       held: qty > 0,
       heldQty: qty,
     };

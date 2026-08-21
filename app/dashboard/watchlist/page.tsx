@@ -4,7 +4,7 @@ import { PRIVATE_LISTINGS } from "@/lib/private";
 import { privateCos } from "@/lib/data";
 import { LISTING_OUTLOOK, OUTLOOK_DISCLAIMER } from "@/lib/listing";
 import { marksFor } from "@/lib/ledger";
-import { orPreviewMarks } from "@/lib/preview";
+import { orPrivateMarks } from "@/lib/preview";
 import { usd } from "@/lib/market";
 import Logo from "@/components/dash/Logo";
 import Sparkline from "@/components/dash/Sparkline";
@@ -55,7 +55,7 @@ export default async function Watchlist() {
   const cards = await Promise.all(
     PRIVATE_LISTINGS.map(async (p) => {
       const recorded = await marksFor(p.symbol).catch(() => []);
-      const { marks, illustrative } = orPreviewMarks(p.symbol, recorded);
+      const { marks, isPrivate } = orPrivateMarks(p.symbol, recorded);
       const last = marks[marks.length - 1];
       const prev = marks[marks.length - 2];
       const co = privateCos.find((c) => c.symbol === p.symbol);
@@ -76,7 +76,7 @@ export default async function Watchlist() {
         basis: last?.basis ?? null,
         series: stepped(marks),
         marksCount: marks.length,
-        illustrative,
+        isPrivate,
         qty,
       };
     }),
@@ -150,7 +150,7 @@ export default async function Watchlist() {
 
                 <div className="wc__mark">
                   <div className="wc__px">
-                    <span className={c.illustrative ? "wc__last num is-illus" : "wc__last num"}>
+                    <span className={c.isPrivate ? "wc__last num is-private" : "wc__last num"}>
                       {c.price != null ? usd(c.price) : "No mark"}
                     </span>
                     <span className="mono wc__unit">per unit</span>
@@ -231,7 +231,7 @@ export default async function Watchlist() {
                 </span>
                 <span>
                   {c.marksCount} mark{c.marksCount === 1 ? "" : "s"}
-                  {c.illustrative ? " · illustrative" : ""}
+                  {c.isPrivate ? " · private mark" : ""}
                 </span>
               </footer>
             </article>
