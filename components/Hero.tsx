@@ -56,9 +56,9 @@ const DECK: Plate[] = [
       { text: "quoted live", em: true },
     ],
     lede:
-      "SPCX listed on Nasdaq on 12 June 2026 — the largest IPO on record, with an unusually high share going to retail. TSLA has traded since 2010. Both price continuously, both move independently.",
+      "SPCX listed on Nasdaq on 12 June 2026 — the largest IPO on record, with an unusually high share allocated to retail. TSLA has traded continuously since 2010. Both price in real time. Both move independently.",
     ledeShort:
-      "SPCX listed on Nasdaq in June 2026. TSLA has traded since 2010. Both price continuously, both move independently.",
+      "SPCX listed on Nasdaq in June 2026. TSLA has traded since 2010. Both price continuously. Both move independently.",
     actions: [
       { label: "Open the market", href: "/dashboard/market", solid: true },
       { label: "See the quotes", href: "#market" },
@@ -73,21 +73,21 @@ const DECK: Plate[] = [
     index: "02",
     eyebrow: "Private",
     head: [
-      { text: "Private names," },
-      { text: "tradeable" },
-      { text: "under treaty", em: true },
+      { text: "Private names." },
+      { text: "Dated marks." },
+      { text: "No continuous quote", em: true },
     ],
     lede:
-      "A private company has no continuous quote, so we don't invent one. Units carry a dated mark and change hands at it — no price is published, because a published price on an unlisted security is a claim nobody can settle.",
+      "Private securities do not trade on a continuous market. Units change hands at a dated mark drawn from private rounds and secondary blocks. That mark is a reference point only. A future public listing price can be substantially higher or substantially lower.",
     ledeShort:
-      "No continuous quote, so we don't invent one. Units carry a dated mark and change hands at it. No price is published.",
+      "Private securities have no continuous quote. Units trade at a dated mark. A future public listing can price far higher or far lower.",
     actions: [
       { label: "How access works", href: "#private", solid: true },
       { label: "Read the terms", href: "#private" },
     ],
     readout: [
-      ["Neuralink", "Coverage planned"],
-      ["Boring Co", "Coverage planned"],
+      ["Neuralink", "Private mark"],
+      ["Boring Co", "Private mark"],
       ["Pricing", "Dated mark · not quoted"],
     ],
   },
@@ -100,9 +100,9 @@ const DECK: Plate[] = [
       { text: "operator", em: true },
     ],
     lede:
-      "Starlink, Grok and X are divisions of SpaceX, not tickers. Knowing which is which is most of the work — so the whole structure sits on one page, dated and checkable.",
+      "Starlink, Grok and X sit inside SpaceX. They are divisions, not separate tickers. Neuralink and The Boring Company remain distinct. The full structure is shown on one page, dated and checkable, so the relationships are never left to assumption.",
     ledeShort:
-      "Starlink, Grok and X are divisions of SpaceX, not tickers. The whole structure sits on one page, dated and checkable.",
+      "Starlink, Grok and X are divisions of SpaceX. Neuralink and Boring remain separate. The full structure is on one page, dated and checkable.",
     actions: [
       { label: "Request access", href: "#access", solid: true },
       { label: "What changed", href: "#timeline" },
