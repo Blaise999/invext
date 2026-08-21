@@ -1,0 +1,22 @@
+{
+  "desktop": {
+    "dir": "seq",
+    "stem": "frame_",
+    "ext": "webp",
+    "pad": 3,
+    "first": 1,
+    "frameCount": 1230,
+    "width": 1600,
+    "height": 900
+  },
+  "mobile": {
+    "dir": "seq-m",
+    "stem": "frame_",
+    "ext": "webp",
+    "pad": 3,
+    "first": 1,
+    "frameCount": 164,
+    "width": 1600,
+    "height": 900
+  }
+}

@@ -2,39 +2,21 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/**
- * SCROLL-SCRUBBED FRAME SEQUENCE
- *
- *   /public/seq/frame_001.webp    …  landscape
- *   /public/seq-m/frame_001.webp  …  portrait
- *
- * padStart(pad) matches printf "%0Nd" minimum width (frame 1000 stays 4 digits).
- * Frame size is measured from the first decoded frame.
- */
-
 export interface SeqConfig {
-  /** Folder under /public, no slashes. */
   dir: string;
-  /** Filename before the number. */
   stem: string;
-  /** Extension, no dot. */
   ext: string;
-  /** Minimum digit width. 3 for frame_001, 4 for frame_0001. */
   pad: number;
-  /** Number on the first file. 1 for ffmpeg, often 0 from Blender. */
   first: number;
   frameCount: number;
 }
 
 interface Props {
   desktop: SeqConfig;
-  /** Portrait render for phones. Falls back to desktop when absent. */
   mobile?: SeqConfig;
   breakpoint?: number;
-  /** Viewport heights of pinned scroll. */
   scrollLength?: number;
   mobileScrollLength?: number;
-  /** 0–1. Lower trails further behind the scroll and settles more slowly. */
   damping?: number;
   onProgress?: (p: number) => void;
   onFrame?: (index: number, total: number) => void;
@@ -44,10 +26,6 @@ interface Props {
 const frameUrl = (c: SeqConfig, n: number) =>
   `/${c.dir}/${c.stem}${String(c.first + n).padStart(c.pad, "0")}.${c.ext}`;
 
-/**
- * Load order by binary subdivision: ends first, then halves, then quarters.
- * Covers the whole range quickly so an early scrub is choppy rather than empty.
- */
 function subdivide(n: number): number[] {
   const out: number[] = [];
   const seen = new Uint8Array(n);
@@ -72,7 +50,7 @@ export default function ScrollSequence({
   desktop,
   mobile,
   breakpoint = 820,
-  scrollLength = 2.4,
+  scrollLength = 2.5,
   mobileScrollLength,
   damping = 0.14,
   onProgress,
@@ -83,7 +61,6 @@ export default function ScrollSequence({
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const frames = useRef<(ImageBitmap | HTMLImageElement | undefined)[]>([]);
-  /** Decoded slots, kept sorted, for nearest-available lookup. */
   const ready = useRef<number[]>([]);
   const slots = useRef(0);
 
@@ -110,18 +87,29 @@ export default function ScrollSequence({
   }, [breakpoint]);
 
   const cfg = narrow && mobile ? mobile : desktop;
+  const pin =
+    narrow && mobileScrollLength != null ? mobileScrollLength : scrollLength;
 
-  /* ------------------------------------------------------------ load ----- */
+  /* pin in px — hero stays still, no black void from vh mismatch */
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap || narrow === null) return;
+    const apply = () => {
+      wrap.style.height = `${pin * window.innerHeight}px`;
+    };
+    apply();
+    window.addEventListener("resize", apply);
+    window.addEventListener("orientationchange", apply);
+    return () => {
+      window.removeEventListener("resize", apply);
+      window.removeEventListener("orientationchange", apply);
+    };
+  }, [pin, narrow]);
 
   useEffect(() => {
     if (narrow === null) return;
     let dead = false;
 
-    /**
-     * Budget by BYTES, not by frame count.
-     * Sample evenly across the FULL sequence so a long render scrubs at a
-     * coarser step rather than blowing RAM.
-     */
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const longCap = narrow ? 720 : 1280;
     const ceiling = (narrow ? 96 : 224) * 1024 * 1024;
@@ -166,11 +154,10 @@ export default function ScrollSequence({
             probeH = probe.height;
             probe.close();
           } catch {
-            /* fall through to Image */
+            /* fall through */
           }
         }
 
-        // Safari / some WebP paths report 0×0 from createImageBitmap — measure via Image.
         if (!probeW || !probeH) {
           const dims = await new Promise<{ w: number; h: number }>((ok, no) => {
             const el = new Image();
@@ -200,9 +187,7 @@ export default function ScrollSequence({
         }
       } catch {
         if (process.env.NODE_ENV !== "production") {
-          console.error(
-            `[hero] could not load ${frameUrl(cfg, 0)} — check the folder and filenames`,
-          );
+          console.error(`[hero] could not load ${frameUrl(cfg, 0)}`);
         }
         return;
       }
@@ -252,7 +237,7 @@ export default function ScrollSequence({
           setLoaded(ready.current.length / n);
           if (ready.current.length === 1) setPainted(true);
         } catch {
-          // Missing frame is survivable — nearest-available covers the gap.
+          /* nearest covers gaps */
         }
       }
     })();
@@ -266,8 +251,6 @@ export default function ScrollSequence({
       ready.current = [];
     };
   }, [cfg, narrow]);
-
-  /* ------------------------------------------------------------- fit ----- */
 
   const fit = useRef({ dx: 0, dy: 0, dw: 0, dh: 0 });
 
@@ -288,7 +271,6 @@ export default function ScrollSequence({
     const scale = Math.max((cw * dpr) / w, (ch * dpr) / h);
     const dw = w * scale;
     const dh = h * scale;
-    // Portrait: bias crop upward so the subject clears the headline.
     const yBias = ch > cw ? 0.34 : 0.5;
     fit.current = {
       dx: (cw * dpr - dw) / 2,
@@ -297,8 +279,6 @@ export default function ScrollSequence({
       dh,
     };
   }, []);
-
-  /* ----------------------------------------------------------- scrub ----- */
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -351,12 +331,8 @@ export default function ScrollSequence({
       raf.current = requestAnimationFrame(tick);
       if (!onScreen.current) return;
 
-      // Smooth lag: scroll only writes target; this eases current toward it.
-      // That single lerp is most of the “3D weight.”
       const k = reduced ? 1 : damping;
       current.current += (target.current - current.current) * k;
-
-      // Snap when extremely close so it doesn’t crawl forever
       if (Math.abs(target.current - current.current) < 0.00015) {
         current.current = target.current;
       }
@@ -391,11 +367,8 @@ export default function ScrollSequence({
     };
   }, [damping, measure, cfg]);
 
-  const pin =
-    narrow && mobileScrollLength != null ? mobileScrollLength : scrollLength;
-
   return (
-    <div ref={wrapRef} className="seq" style={{ height: `${pin * 100}dvh` }}>
+    <div ref={wrapRef} className="seq">
       <div className="seq__stage">
         <canvas ref={canvasRef} className="seq__canvas" />
         {children}

@@ -5097,3 +5097,169 @@ html, body {
 @media (max-width: 760px) {
   .zone:first-of-type { padding-top: 30px; }
 }
+/* ============================================================
+   HERO PIN — must stay sticky; no void
+   ============================================================ */
+
+.seq {
+  position: relative;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: var(--bg);
+  /* height is set in px by ScrollSequence JS — do not set vh here */
+}
+
+.seq__stage {
+  position: sticky !important;
+  top: 0 !important;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100svh;
+  overflow: clip;
+  background: var(--bg);
+  z-index: 1;
+  /* avoid contain: paint here if sticky still fails on your browser */
+}
+
+.seq + .ticker {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  border-top: 1px solid var(--line);
+}
+
+.zone:first-of-type {
+  padding-top: 36px !important;
+}
+
+@media (max-width: 760px) {
+  .zone:first-of-type {
+    padding-top: 24px !important;
+  }
+}
+
+/* ============================================================
+   HERO — FINAL OVERRIDES (void + clarity + CTA)
+   Paste at END of globals.css. Wins over every earlier .seq rule.
+   ============================================================ */
+
+.seq {
+  position: relative;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: var(--bg);
+}
+
+.seq__stage {
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100svh;
+  overflow: clip;
+  contain: paint;
+  background: var(--bg);
+}
+
+.seq__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Stronger legibility over bright frames */
+.seq__stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    linear-gradient(
+      to top,
+      rgba(6, 6, 8, 0.96) 0%,
+      rgba(6, 6, 8, 0.7) 30%,
+      rgba(6, 6, 8, 0.28) 55%,
+      rgba(6, 6, 8, 0) 78%
+    ),
+    linear-gradient(
+      to right,
+      rgba(6, 6, 8, 0.85) 0%,
+      rgba(6, 6, 8, 0.35) 40%,
+      rgba(6, 6, 8, 0) 70%
+    );
+}
+
+.hero {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  padding: 0;
+}
+.hero a,
+.hero button {
+  pointer-events: auto;
+}
+
+.plate__h,
+.plate__lede,
+.plate__eyebrow {
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.55),
+    0 4px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* Nav “Create account” */
+.hero__nav-cta {
+  color: var(--amber) !important;
+  border: 1px solid var(--amber-dp);
+  padding: 6px 12px !important;
+  border-radius: 999px;
+  letter-spacing: 0.1em;
+}
+.hero__nav-cta:hover {
+  background: rgba(232, 163, 61, 0.12);
+  color: var(--ink) !important;
+}
+
+/* ---- ZERO GAP after pin → ticker → first zone ---- */
+
+.seq + .ticker {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  border-top: 1px solid var(--line);
+}
+
+.seq + .ticker + .rv > .zone:first-child,
+.seq + .ticker + .zone:first-of-type,
+.zone:first-of-type {
+  padding-top: 36px !important;
+}
+
+@media (max-width: 760px) {
+  .seq + .ticker + .rv > .zone:first-child,
+  .seq + .ticker + .zone:first-of-type,
+  .zone:first-of-type {
+    padding-top: 24px !important;
+  }
+}
+
+@media (max-width: 820px) {
+  .seq__stage::after {
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.97) 0%,
+      rgba(0, 0, 0, 0.9) 28%,
+      rgba(0, 0, 0, 0.55) 52%,
+      rgba(0, 0, 0, 0.15) 72%,
+      rgba(0, 0, 0, 0) 88%
+    );
+  }
+}
