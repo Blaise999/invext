@@ -45,7 +45,6 @@ export default async function Page() {
 
   const stories = placeImages(NEWS, wiki, newsNasa);
 
-  // Map isPrivate → illustrative so PrivateList's existing type still matches
   const latestMarks = Object.fromEntries(
     markRows.map(([symbol, { marks, isPrivate }]) => {
       const last = marks[marks.length - 1];
@@ -308,20 +307,21 @@ export default async function Page() {
         </h2>
         <Waitlist />
         <p className="cta__alt mono">
-          Access opens by application. Verify any firm on SEC IAPD and FINRA
-          BrokerCheck.
+          Updates on listings, structure and market events. Verify any firm on
+          SEC IAPD and FINRA BrokerCheck.
         </p>
       </section>
 
       <footer className="foot">
         <div className="foot__disc">
-          <h3 className="mono">Required disclosure</h3>
+          <h3 className="mono">Disclosure</h3>
           <p>
-            {company.name ?? company.brand} is not affiliated with, sponsored by,
-            endorsed by, or acting as agent for Tesla, Inc., Space Exploration
-            Technologies Corp., Neuralink Corp., The Boring Company, NVIDIA, or
-            any officer or founder of those companies. Names and marks are used
-            for identification only.
+            {company.name ?? company.brand} covers the public and private
+            securities connected to Tesla, SpaceX (SPCX), Neuralink, The Boring
+            Company and related entities in the group. Company names and marks
+            appear for identification and coverage purposes. We are an
+            independent platform — not the issuer, not the official corporate
+            site, and not a substitute for filings made by those companies.
           </p>
           <p>
             Public quotes are end-of-day and delayed, sourced from a third party.
@@ -329,7 +329,6 @@ export default async function Page() {
             shown are dated reference points from private transactions. A future
             public listing price can move substantially higher or lower than any
             private mark displayed — that is the nature of early access.
-            Investments in private companies are speculative and can be illiquid.
           </p>
           <p>
             Imagery from the NASA Image and Video Library is public domain.

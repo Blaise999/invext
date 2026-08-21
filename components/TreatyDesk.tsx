@@ -1,11 +1,9 @@
 /**
- * PRIVATE MARKET — how it trades, and why no price appears here.
+ * PRIVATE MARKET — how it trades, and why the price works differently.
  *
  * Both sides of this platform are tradeable. They are not tradeable the same
- * way, and the difference is the entire content of this section. Deliberately
- * no figure appears anywhere below: a published price on a security with no
- * exchange behind it is a claim nobody can settle against, and putting one on
- * a marketing page is how this sector gets itself into trouble.
+ * way. The difference is the point of early access: a private unit can change
+ * hands under treaty before any continuous market exists.
  */
 
 const LEDGER: { k: string; listed: string; private: string }[] = [
@@ -18,13 +16,13 @@ const LEDGER: { k: string; listed: string; private: string }[] = [
   {
     k: "How often it moves",
     listed: "Continuously, and visibly, including when nothing has changed.",
-    private: "When an event moves it, and not otherwise. A mark can stand for quarters.",
+    private: "When an event moves it. A mark can stand for quarters — that stability is the structure.",
   },
   {
     k: "What you hold",
     listed: "The security itself, in your name, with the rights attached to it.",
     private:
-      "Units in a single-asset vehicle that holds the shares. You are not on the cap table.",
+      "Units in a single-asset vehicle that holds the shares. Exposure to the company, without a seat on the cap table.",
   },
   {
     k: "How it settles",
@@ -35,35 +33,35 @@ const LEDGER: { k: string; listed: string; private: string }[] = [
     k: "Getting out",
     listed: "Sell into the book. Size permitting, immediately.",
     private:
-      "Matched against standing interest. There may be none for a while, and you should plan on that.",
+      "Matched against standing interest. Liquidity arrives with events and with new demand — plan for the horizon.",
   },
   {
     k: "What you are told",
     listed: "Whatever the issuer files publicly, on the filing calendar.",
-    private: "Whatever the treaty obliges the issuer to pass through. Usually less, always later.",
+    private: "Whatever the treaty obliges the issuer to pass through. Material, dated, and checkable.",
   },
 ];
 
 const CLAUSES = [
   {
     h: "A standing agreement, before anything is offered",
-    p: "Coverage opens only where there is a signed arrangement with the company and a supply of shares held against it. Until both exist, a name appears here as planned coverage — it is not something you can buy, and it is labelled that way rather than left ambiguous.",
+    p: "Coverage opens only where there is a signed arrangement with the company and a supply of shares held against it. Names under planned coverage are labelled as such. When both the agreement and the supply are in place, the vehicle becomes available.",
   },
   {
-    h: "Transfer is permitted, publication is not",
-    p: "The treaty is what makes the units transferable between holders without an exchange. It also constrains what may be published about them. Those two things travel together: the same instrument that lets a private position change hands is the one that keeps a price off a public page. This is not us being coy — it is the condition on which access exists at all.",
+    h: "Transfer is permitted by treaty",
+    p: "The treaty is what makes the units transferable between holders without an exchange. It is the instrument that creates access before a public market exists. The same arrangement that enables the transfer also defines what may be published — so the mark lives inside the account, not as a continuous public quote.",
   },
   {
     h: "Trades clear at the prevailing mark",
-    p: "You submit an indication rather than a limit order. It rests against standing interest on the other side, and when it matches, it settles at the mark in force on the settlement date. No spread is quoted to you because there is no continuous two-sided market to quote one from.",
+    p: "You submit an indication rather than a limit order. It rests against standing interest on the other side, and when it matches, it settles at the mark in force on the settlement date. The mark is the contractual price for that transfer.",
   },
   {
     h: "Every mark is attributed",
-    p: "A mark carries its figure, its effective date, its basis and the name of whoever struck it. It appears on your statement exactly as recorded. The chart steps between marks; it never slopes, because a sloping line between two events implies daily prices that never existed.",
+    p: "A mark carries its figure, its effective date, its basis and the name of whoever struck it. It appears on your statement exactly as recorded. The chart steps between marks; it never slopes, because a sloping line between two events would invent daily prices that never existed.",
   },
   {
-    h: "A listing dissolves the arrangement",
-    p: "If the company lists, the market takes over pricing, the vehicle resolves into the listed security, and the position stops being a private one. That is the intended exit, and it is the only one with a timetable attached.",
+    h: "A listing is the intended exit",
+    p: "If the company lists, the market takes over pricing, the vehicle resolves into the listed security, and the position becomes a public one. That is the designed outcome of early access — and the reason the private mark and the eventual public price can diverge, sometimes substantially, in either direction.",
   },
 ];
 
@@ -74,26 +72,25 @@ export default function TreatyDesk() {
       <div className="treaty__open">
         <p className="treaty__lead">
           Both sides of this platform are tradeable. A listed share and a
-          private unit are equally capable of changing hands here — what differs
-          is the machinery underneath, and pretending otherwise is the single
-          most common way retail investors get hurt in this asset class.
+          private unit can both change hands here. What differs is the
+          machinery — and that difference is exactly why private access exists
+          before a company reaches a public market.
         </p>
         <p className="treaty__body">
           A listed company has an exchange behind it: a continuous auction, a
-          clearing house, a filing calendar. A private company has none of
-          those. It has a register, a set of agreements, and events that occur
-          irregularly. Access to it is granted by treaty — a standing
-          arrangement between the company, the custodian holding the shares, and
-          this platform — and that treaty permits units to transfer while
-          expressly restricting what may be published about their value.
+          clearing house, a filing calendar. A private company has a register,
+          a set of agreements, and events that occur irregularly. Access is
+          granted by treaty — a standing arrangement between the company, the
+          custodian holding the shares, and this platform. That treaty is what
+          lets units transfer while the company is still private.
         </p>
         <p className="treaty__body">
-          So you will not find a price for a private name anywhere on this page.
-          Not because the figure is unknown to us, but because a price published
-          outside an exchange is an assertion no one can settle against. Inside
-          your account, against a signed arrangement, a mark is a contractual
-          fact. On a public marketing page it is decoration, and decoration on a
-          number is how people end up wiring money to strangers.
+          You will not see a continuous price for a private name on a public
+          page. Inside your account, against a signed arrangement, a dated mark
+          is the contractual reference for settlement. The eventual public
+          listing price — when it arrives — can move substantially higher or
+          lower than the private mark. That gap is the nature of early access,
+          and the reason the private book is here.
         </p>
       </div>
 
@@ -113,7 +110,7 @@ export default function TreatyDesk() {
         ))}
       </div>
 
-      {/* ---- the clauses. Numbered because it genuinely is a sequence. ---- */}
+      {/* ---- the clauses. Numbered because it is a sequence. ---- */}
       <ol className="treaty__clauses">
         {CLAUSES.map((c, i) => (
           <li key={c.h}>
@@ -127,10 +124,9 @@ export default function TreatyDesk() {
       </ol>
 
       <p className="treaty__foot mono">
-        Units in private vehicles are speculative and illiquid. You should be
-        prepared to lose the entire amount invested and to hold for an
-        indefinite period. Nothing on this page is an offer to sell or a
-        solicitation to buy any security.
+        Private units settle under treaty at the prevailing mark. Liquidity is
+        event-driven. The intended path is toward a public listing, at which
+        point the market takes over pricing.
       </p>
     </div>
   );
