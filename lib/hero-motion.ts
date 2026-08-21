@@ -92,7 +92,7 @@ const ANCHORS: Crop[] = [
   { x: 0.5, y: 0.41, zoom: 1.01 },
 ];
 
-export function cropAt(p: number): Crop {
+export function cropAt(p: number, narrow = false): Crop {
   const t = clamp01(p) * (PLATES - 1);
   const i = Math.min(PLATES - 2, Math.floor(t));
   const f = smooth(t - i);
@@ -105,10 +105,26 @@ export function cropAt(p: number): Crop {
   // small enough to read as a hand on a camera rather than as a wobble.
   const breath = Math.sin(p * Math.PI * 2.4) * 0.007;
 
+  const zoom = lerp(a.zoom, b.zoom, f) + breath;
+
+  /**
+   * A portrait master is already close to a phone's aspect ratio, so the
+   * desktop anchors — which assume a wide frame with room to travel across —
+   * throw most of the subject off screen. On a narrow viewport the travel is
+   * pulled most of the way back toward centre and the push-in is damped.
+   */
+  if (narrow) {
+    return {
+      x: lerp(0.5, lerp(a.x, b.x, f), 0.34),
+      y: lerp(0.42, lerp(a.y, b.y, f), 0.34),
+      zoom: 1 + (zoom - 1) * 0.4,
+    };
+  }
+
   return {
     x: lerp(a.x, b.x, f),
     y: lerp(a.y, b.y, f),
-    zoom: lerp(a.zoom, b.zoom, f) + breath,
+    zoom,
   };
 }
 
@@ -134,7 +150,19 @@ export interface Envelope {
  * there when the pin releases into the ticker.
  */
 export function envelopeAt(local: number, first: boolean, last: boolean): Envelope {
-  const enter = first ? 1 : smooth((local + 0.1) / 0.34);
+  /**
+   * The last plate reveals slowly, across most of its band, and that is the
+   * whole fix for the dead stretch under the hero.
+   *
+   * With a 0.34 rise every plate finished a quarter of the way into its own
+   * band — plate three had said everything it was going to say by p = 0.75,
+   * leaving the final quarter of the pin as scroll that changed nothing. That
+   * reads as empty space even though the stage is still full-bleed. A 0.86
+   * rise lands plate three at p = 0.92, so the copy finishes just before the
+   * pin releases rather than long before it.
+   */
+  const rise = last ? 0.86 : 0.34;
+  const enter = first ? 1 : smooth((local + 0.1) / rise);
   const exit = last ? 1 : smooth((1.12 - local) / 0.34);
   return { enter, exit, presence: Math.min(enter, exit) };
 }

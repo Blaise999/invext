@@ -72,6 +72,124 @@ export async function nasaMedia(
   }
 }
 
+/* ------------------------------------------------------------------ video -- */
+
+export interface Clip extends Shot {
+  kind: "video";
+  /** Playable file. */
+  src: string;
+  /** Still shown before play, so the wall is not five black rectangles. */
+  poster?: string;
+}
+
+const MP4 = /\.mp4$/i;
+/** Smallest first: a landing page wants a clip that starts, not a master. */
+const RENDITION_ORDER = ["~mobile", "~small", "~medium", "~large", "~orig"];
+
+/**
+ * Turn one search hit into a playable clip.
+ *
+ * This is the bug that was leaving the video wall dead. A search response for
+ * media_type=video carries only thumbnail JPEGs and a captions .srt in
+ * links[] — no video file at all. The old code took links[0].href, swapped
+ * ~thumb.jpg for ~medium.jpg, and handed the resulting JPEG to <video src>,
+ * which of course renders an empty player with no error.
+ *
+ * The actual files live behind a second request to /asset/{nasa_id}, which
+ * returns one entry per rendition. Two gotchas the API will hand you:
+ * some video IDs contain literal spaces in their hrefs, and several come back
+ * as http:// rather than https://.
+ */
+async function resolveClip(item: any): Promise<Clip | null> {
+  const meta = item?.data?.[0];
+  if (!meta?.nasa_id) return null;
+
+  const links: any[] = item?.links ?? [];
+  const poster = links
+    .map((l) => String(l?.href ?? ""))
+    .find((h) => /\.(jpg|jpeg|png)$/i.test(h));
+
+  try {
+    const res = await fetch(
+      `https://images-api.nasa.gov/asset/${encodeURIComponent(meta.nasa_id)}`,
+      { next: { revalidate: DAY } },
+    );
+    if (!res.ok) return null;
+    const json = await res.json();
+
+    const files = ((json?.collection?.items ?? []) as any[])
+      .map((f) => String(f?.href ?? ""))
+      // http -> https, and spaces encoded, or the request is rejected outright.
+      .map((h) => h.replace(/^http:\/\//, "https://").replace(/ /g, "%20"))
+      .filter((h) => MP4.test(h));
+
+    if (files.length === 0) return null;
+
+    const pick =
+      RENDITION_ORDER.map((tag) => files.find((f) => f.includes(tag))).find(Boolean) ??
+      files[0];
+
+    return {
+      id: meta.nasa_id,
+      title: tidy(meta.title ?? "NASA footage"),
+      src: pick as string,
+      poster: poster
+        ? poster.replace(/^http:\/\//, "https://").replace(/ /g, "%20")
+        : undefined,
+      credit: (meta.photographer || meta.center || "NASA") as string,
+      licence: "Public domain",
+      sourceUrl: `https://images.nasa.gov/details/${meta.nasa_id}`,
+      kind: "video",
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Playable public-domain clips.
+ *
+ * Over-fetches deliberately: a good number of library entries are audio-era
+ * records or stills-with-captions that carry no mp4 at all, so asking for
+ * exactly `count` reliably returns fewer than `count`.
+ */
+export async function nasaClips(queries: string[], count = 3): Promise<Clip[]> {
+  try {
+    const sets = await Promise.all(
+      queries.map(async (q) => {
+        const url =
+          "https://images-api.nasa.gov/search?media_type=video" +
+          `&page_size=12&q=${encodeURIComponent(q)}`;
+        const res = await fetch(url, { next: { revalidate: DAY } });
+        if (!res.ok) return [];
+        const json = await res.json();
+        return (json?.collection?.items ?? []) as any[];
+      }),
+    );
+
+    // Round-robin so one query cannot own the whole wall.
+    const queue: any[] = [];
+    for (let round = 0; round < 12; round++) {
+      for (const set of sets) if (set[round]) queue.push(set[round]);
+    }
+
+    const out: Clip[] = [];
+    const seen = new Set<string>();
+
+    for (let i = 0; i < queue.length && out.length < count; i += 4) {
+      const batch = await Promise.all(queue.slice(i, i + 4).map(resolveClip));
+      for (const clip of batch) {
+        if (!clip || seen.has(clip.id) || out.length >= count) continue;
+        seen.add(clip.id);
+        out.push(clip);
+      }
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
 /** Several queries in parallel, deduped — one query returns very samey frames. */
 const norm = (t: string) =>
   t.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().slice(0, 44);
