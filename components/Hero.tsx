@@ -141,59 +141,73 @@ export default function Hero() {
       onProgress={setProgress}
       onFrame={(i, n) => setFrame({ i, n })}
     >
-      <div className="hero" style={{ position: "relative", zIndex: 1 }}>
+      <div className="hero">
         {/* ---------------- masthead ---------------- */}
         <header className="hero__nav">
-          <a
-            className="wordmark"
-            href="/"
-            aria-label="InveXt home"
-            style={{ color: "inherit", textDecoration: "none" }}
-          >
+          <a className="wordmark" href="/" aria-label="InveXt home">
             <Brand size={26} />
           </a>
+
           <nav aria-label="Primary">
-            <a href="#market" style={{ color: "inherit", textDecoration: "none" }}>
-              Markets
-            </a>
-            <a href="#private" style={{ color: "inherit", textDecoration: "none" }}>
-              Private
+            <a href="#market">Markets</a>
+            <a href="#private">Private</a>
+            <a href="#intelligence">Intelligence</a>
+            <a href="#argument">Thesis</a>
+            <a href="/dashboard">Dashboard</a>
+          </nav>
+
+          {/* Auth CTAs */}
+          <div
+            className="hero__auth"
+            style={{ display: "flex", gap: "10px", alignItems: "center" }}
+          >
+            <a
+              href="/login"
+              className="btn"
+              style={{
+                padding: "9px 16px",
+                fontSize: "13px",
+                fontWeight: 600,
+              }}
+            >
+              Log in
             </a>
             <a
-              href="#intelligence"
-              style={{ color: "inherit", textDecoration: "none" }}
+              href="/signup"
+              className="btn btn--solid"
+              style={{
+                padding: "9px 18px",
+                fontSize: "13px",
+                fontWeight: 700,
+              }}
             >
-              Intelligence
+              Open account
             </a>
-            <a href="#argument" style={{ color: "inherit", textDecoration: "none" }}>
-              Thesis
-            </a>
-            <a href="/dashboard" style={{ color: "inherit", textDecoration: "none" }}>
-              Dashboard
-            </a>
-          </nav>
+          </div>
         </header>
 
         {/* ---------------- aperture blades ---------------- */}
-        <div
-          className="ap"
-          aria-hidden="true"
-          style={{ position: "absolute", zIndex: 0, pointerEvents: "none" }}
-        >
+        <div className="ap" aria-hidden="true">
           <i className="ap__blade ap__blade--t" />
           <i className="ap__blade ap__blade--b" />
           <i className="ap__cut" />
         </div>
 
         {/* ---------------- plates ---------------- */}
-        <div className="hero__deck" style={{ position: "relative", zIndex: 10 }}>
+        <div className="hero__deck">
           {DECK.map((plate, i) => {
             const local = localOf(p, i);
             const first = i === 0;
             const last = i === PLATES - 1;
             const { enter, exit, presence } = envelopeAt(local, first, last);
-            const live = presence > 0.55;
-            const off = presence < 0.02;
+
+            const live = presence > 0.72;
+            const off = presence < 0.08;
+
+            const visualOpacity =
+              i === active
+                ? presence
+                : Math.max(0, (presence - 0.35) / 0.65);
 
             return (
               <article
@@ -202,21 +216,21 @@ export default function Hero() {
                 data-on={live ? "true" : undefined}
                 data-off={off ? "true" : undefined}
                 style={{
-                  opacity: presence,
-                  zIndex: i === active ? 3 : live ? 2 : 1,
-                  transform: `translate3d(0, ${(1 - enter) * 18 + (1 - exit) * -18}px, 0)`,
+                  opacity: visualOpacity,
+                  zIndex: i === active ? 4 : live ? 2 : 1,
+                  transform: `translate3d(0, ${(1 - enter) * 14 + (1 - exit) * -14}px, 0)`,
                   pointerEvents: live ? "auto" : "none",
                   visibility: off ? "hidden" : "visible",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "1.5rem",
-                  position: "relative",
                 }}
                 aria-hidden={!live}
               >
                 <p
                   className="plate__eyebrow mono"
-                  style={{ clipPath: wipe(enter, exit), margin: 0 }}
+                  style={{
+                    clipPath: wipe(enter, exit),
+                    fontSize: "11.5px",
+                    letterSpacing: "0.2em",
+                  }}
                 >
                   <span className="plate__no">{plate.index}</span>
                   {plate.eyebrow}
@@ -227,25 +241,21 @@ export default function Hero() {
                   />
                 </p>
 
+                {/* Headline – modest size increase, controlled height */}
                 <h1
                   className="plate__h"
                   style={{
-                    margin: 0,
-                    lineHeight: "1.2",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.25rem",
+                    fontSize: "clamp(34px, 5.2vw, 72px)",
+                    lineHeight: 0.96,
+                    letterSpacing: "-0.038em",
+                    fontWeight: 200,
                   }}
                 >
                   {plate.head.map((line, k) => (
                     <span
                       key={k}
                       className="plate__line"
-                      style={{
-                        clipPath: wipe(stagger(enter, k), exit),
-                        display: "block",
-                        whiteSpace: "nowrap",
-                      }}
+                      style={{ clipPath: wipe(stagger(enter, k), exit) }}
                     >
                       <span className={line.em ? "plate__em" : undefined}>
                         {line.text}
@@ -257,9 +267,10 @@ export default function Hero() {
                 <p
                   className="plate__lede"
                   style={{
-                    clipPath: wipe(stagger(enter, 2), exit),
-                    margin: 0,
-                    lineHeight: "1.5",
+                    fontSize: "clamp(14.5px, 1.1vw, 16.5px)",
+                    lineHeight: 1.55,
+                    maxWidth: "46ch",
+                    marginTop: "1.25rem",
                   }}
                 >
                   <span className="only-wide">{plate.lede}</span>
@@ -268,11 +279,7 @@ export default function Hero() {
 
                 <div
                   className="plate__actions"
-                  style={{
-                    clipPath: wipe(stagger(enter, 3), exit),
-                    display: "flex",
-                    gap: "1rem",
-                  }}
+                  style={{ marginTop: "1.6rem", gap: "10px" }}
                 >
                   {plate.actions.map((a) => (
                     <a
@@ -281,10 +288,9 @@ export default function Hero() {
                       className={a.solid ? "btn btn--solid" : "btn"}
                       tabIndex={live ? 0 : -1}
                       style={{
-                        color: a.solid ? "#ffffff" : "inherit",
-                        textDecoration: "none",
-                        display: "inline-flex",
-                        alignItems: "center",
+                        padding: "11px 18px",
+                        fontSize: "13.5px",
+                        fontWeight: 600,
                       }}
                     >
                       {a.label}
@@ -292,14 +298,15 @@ export default function Hero() {
                   ))}
                 </div>
 
-                <dl
-                  className="plate__readout"
-                  style={{ clipPath: wipe(stagger(enter, 4), exit) }}
-                >
+                <dl className="plate__readout" style={{ marginTop: "1.75rem" }}>
                   {plate.readout.map(([k, v]) => (
                     <div key={k}>
-                      <dt className="mono">{k}</dt>
-                      <dd className="mono">{v}</dd>
+                      <dt className="mono" style={{ fontSize: "10.5px" }}>
+                        {k}
+                      </dt>
+                      <dd className="mono" style={{ fontSize: "12px", marginTop: "4px" }}>
+                        {v}
+                      </dd>
                     </div>
                   ))}
                 </dl>
@@ -321,7 +328,6 @@ export default function Hero() {
               </li>
             ))}
           </ol>
-
           <p className="mono tp__frame">
             {frame.n > 0
               ? `FRAME ${String(frame.i + 1).padStart(4, "0")} / ${String(frame.n).padStart(4, "0")}`

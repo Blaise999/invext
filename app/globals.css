@@ -5566,17 +5566,14 @@ html, body {
 /* Stronger mobile scrim so type doesn’t get lost */
 @media (max-width: 820px) {
   .seq__stage::after {
-    background: linear-gradient(
-      to top,
-      rgba(0, 0, 0, 0.97) 0%,
-      rgba(0, 0, 0, 0.9) 28%,
-      rgba(0, 0, 0, 0.55) 55%,
-      rgba(0, 0, 0, 0.15) 78%,
-      transparent 100%
-    ) !important;
+    background:
+      linear-gradient(to top,
+        rgba(0, 0, 0, 0.88) 0%,
+        rgba(0, 0, 0, 0.70) 32%,
+        rgba(0, 0, 0, 0.35) 58%,
+        transparent 85%) !important;
   }
 }
-
 /* Don’t re-break sticky on small screens */
 @media (max-width: 640px) {
   html, body {
@@ -5639,21 +5636,24 @@ html, body {
 }
 
 .seq__stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
   background:
-    linear-gradient(
-      to top,
-      rgba(6, 6, 8, 0.98) 0%,
-      rgba(6, 6, 8, 0.9) 28%,
-      rgba(6, 6, 8, 0.55) 52%,
-      rgba(6, 6, 8, 0.15) 75%,
-      transparent 100%
-    ),
-    linear-gradient(
-      to right,
-      rgba(6, 6, 8, 0.85) 0%,
-      rgba(6, 6, 8, 0.35) 45%,
-      transparent 75%
-    ) !important;
+    linear-gradient(to top,
+      rgba(6, 6, 8, 0.82) 0%,
+      rgba(6, 6, 8, 0.55) 28%,
+      rgba(6, 6, 8, 0.22) 55%,
+      transparent 78%),
+    linear-gradient(to right,
+      rgba(6, 6, 8, 0.55) 0%,
+      rgba(6, 6, 8, 0.15) 45%,
+      transparent 72%),
+    linear-gradient(to bottom,
+      rgba(6, 6, 8, 0.45) 0%,
+      transparent 14%);
 }
 
 .plate__h,
@@ -5663,3 +5663,43 @@ html, body {
     0 4px 24px rgba(0, 0, 0, 0.65);
 }
 
+/* ===== HERO DIMMING FIX (override only) ===== */
+.seq__stage::after {
+  background:
+    linear-gradient(to top,
+      rgba(6, 6, 8, 0.70) 0%,
+      rgba(6, 6, 8, 0.40) 32%,
+      rgba(6, 6, 8, 0.15) 58%,
+      transparent 82%),
+    linear-gradient(to right,
+      rgba(6, 6, 8, 0.42) 0%,
+      rgba(6, 6, 8, 0.10) 48%,
+      transparent 75%),
+    linear-gradient(to bottom,
+      rgba(6, 6, 8, 0.32) 0%,
+      transparent 12%) !important;
+}
+
+@media (max-width: 820px) {
+  .seq__stage::after {
+    background:
+      linear-gradient(to top,
+        rgba(0, 0, 0, 0.75) 0%,
+        rgba(0, 0, 0, 0.50) 35%,
+        rgba(0, 0, 0, 0.18) 62%,
+        transparent 88%) !important;
+  }
+}
+
+.seq__canvas {
+  filter: blur(calc(var(--heat, 0) * 2.5px)) !important;
+  transform: scale(calc(1 + var(--heat, 0) * 0.01)) !important;
+}
+
+.plate__h {
+  color: #f5f4f0 !important;
+}
+
+.plate__lede {
+  color: rgba(245, 244, 240, 0.90) !important;
+}
