@@ -5064,3 +5064,36 @@ html, body {
 @media (min-width: 761px) {
   .progress { display: none; }
 }
+
+/* ============================================================
+   HERO EXIT — close the gap under the pinned stage
+   ============================================================
+
+   Two separate things were adding emptiness below the hero:
+
+   1. The pin ran 3.15 viewports for three plates, so roughly a third of a
+      screen of scroll happened after the last plate had finished saying
+      anything. That is now 2.6 (1.55 on phones) in Hero.tsx — a viewport per
+      plate plus a little for the hand-offs.
+
+   2. The first zone carried the same top padding as every other section, on
+      top of a full viewport of hero that had already ended. Sections need
+      space between them; a section does not need space above it when a whole
+      pinned screen just finished.
+   ============================================================ */
+
+.seq + .ticker,
+.seq + .ticker + * .zone:first-of-type,
+.seq + * > .zone:first-of-type {
+  padding-top: 0;
+}
+
+/* The ticker rail is the hand-off out of the hero — keep it tight to both. */
+.seq + .ticker { margin-top: 0; border-top: 1px solid var(--line); }
+
+/* First content zone after the hero/ticker: half the usual lead-in. */
+.zone:first-of-type { padding-top: 44px; }
+
+@media (max-width: 760px) {
+  .zone:first-of-type { padding-top: 30px; }
+}

@@ -1,9 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import ScrollSequence from "./ScrollSequence";
+import ScrollSequence, { type SeqConfig } from "./ScrollSequence";
+
+/* ---------------------------------------------------------------- frames --
+   Where the renders live. Change these when you re-export.
+
+     /public/seq/frame_001.webp    …  frame_1000.webp
+     /public/seq-m/frame_001.webp  …  frame_1000.webp
+
+   pad is 3, not 4: "%03d" pads to a minimum of three, so frame 1000 keeps its
+   four digits. padStart(3) gives "001" and "1000" — both correct.            */
+
+const SEQ_DESKTOP: SeqConfig = {
+  dir: "seq", stem: "frame_", ext: "webp", pad: 3, first: 1, frameCount: 1000,
+};
+
+const SEQ_MOBILE: SeqConfig = {
+  dir: "seq-m", stem: "frame_", ext: "webp", pad: 3, first: 1, frameCount: 1000,
+};
 import Brand from "./Brand";
-import type { HeroSequences } from "@/lib/sequence-server";
 import {
   PLATES,
   SEG,
@@ -89,7 +105,7 @@ const DECK: Plate[] = [
 
 /* ------------------------------------------------------------- component -- */
 
-export default function Hero({ seq }: { seq: HeroSequences }) {
+export default function Hero() {
   const [p, setProgress] = useState(0);
   const [frame, setFrame] = useState({ i: 0, n: 0 });
 
@@ -98,18 +114,19 @@ export default function Hero({ seq }: { seq: HeroSequences }) {
 
   return (
     <ScrollSequence
-      desktop={seq.desktop}
-      mobile={seq.mobile}
+      desktop={SEQ_DESKTOP}
+      mobile={SEQ_MOBILE}
       /**
        * Pin length.
        *
-       * Was 3.9 viewports for three plates, which left roughly a third of a
-       * screen of scroll after the last one had finished saying anything —
-       * the dead stretch under the hero. Three plates need three viewports and
-       * a little overlap for the hand-offs, not four.
+       * Three plates, so roughly one viewport each plus a little for the
+       * hand-offs. Anything beyond that is the dead stretch under the hero —
+       * scroll that changes nothing while the reader waits for the page to
+       * move on. Shorter on a phone, where the same distance takes twice the
+       * thumb work.
        */
-      scrollLength={3.15}
-      mobileScrollLength={1.95}
+      scrollLength={2.6}
+      mobileScrollLength={1.55}
       damping={0.13}
       onProgress={setProgress}
       onFrame={(i, n) => setFrame({ i, n })}
