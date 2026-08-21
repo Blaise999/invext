@@ -127,9 +127,9 @@ export default function Hero() {
     <ScrollSequence
       desktop={SEQ_DESKTOP}
       mobile={SEQ_MOBILE}
-      scrollLength={3.2}
-      mobileScrollLength={2.4}
-      damping={0.14}
+      scrollLength={4.8}
+      mobileScrollLength={3.2}
+      damping={0.12}
       crop={cropAt}
       heat={heatAt}
       onProgress={setProgress}
@@ -165,15 +165,22 @@ export default function Hero() {
             const last = i === PLATES - 1;
             const { enter, exit, presence } = envelopeAt(local, first, last);
             const live = presence > 0.55;
+            const off = presence < 0.02;
 
             return (
               <article
                 key={plate.index}
                 className={`plate plate--${plate.index}`}
+                data-on={live ? "true" : undefined}
+                data-off={off ? "true" : undefined}
                 style={{
-                  transform: `translate3d(0, ${(1 - enter) * 26 + (1 - exit) * -30}px, 0)`,
+                  // Fade the whole plate so two plates never stack as solid type
+                  opacity: presence,
+                  // Active plate always on top during hand-off
+                  zIndex: i === active ? 3 : live ? 2 : 1,
+                  transform: `translate3d(0, ${(1 - enter) * 18 + (1 - exit) * -18}px, 0)`,
                   pointerEvents: live ? "auto" : "none",
-                  visibility: presence < 0.02 ? "hidden" : "visible",
+                  visibility: off ? "hidden" : "visible",
                 }}
                 aria-hidden={!live}
               >

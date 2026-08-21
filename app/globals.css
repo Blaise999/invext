@@ -5583,3 +5583,83 @@ html, body {
     overflow-x: clip !important;
   }
 }
+
+/* Kill purple defaults on hero CTAs */
+.plate__actions a,
+.hero a.btn,
+.plate__actions .btn {
+  color: #f0eee9 !important;
+  text-decoration: none !important;
+  background: transparent;
+  border: 1px solid rgba(240, 238, 233, 0.32);
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.plate__actions a:hover,
+.hero a.btn:hover {
+  border-color: rgba(240, 238, 233, 0.6);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff !important;
+}
+
+.plate__actions a.btn--solid,
+.plate__actions .btn--solid {
+  background: var(--amber) !important;
+  border-color: var(--amber) !important;
+  color: #0b0b0d !important;
+}
+/* Stack plates in the same cell */
+.hero__deck {
+  position: absolute;
+  inset: 0;
+  display: grid;
+}
+
+.plate {
+  grid-area: 1 / 1;
+  position: relative;
+  z-index: 1;
+}
+
+/* When a plate is fully off, remove it from hit-testing and stacking */
+.plate[data-off="true"] {
+  visibility: hidden !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+
+.plate[data-on="true"] {
+  z-index: 2;
+}
+
+.seq__stage::after {
+  background:
+    linear-gradient(
+      to top,
+      rgba(6, 6, 8, 0.98) 0%,
+      rgba(6, 6, 8, 0.9) 28%,
+      rgba(6, 6, 8, 0.55) 52%,
+      rgba(6, 6, 8, 0.15) 75%,
+      transparent 100%
+    ),
+    linear-gradient(
+      to right,
+      rgba(6, 6, 8, 0.85) 0%,
+      rgba(6, 6, 8, 0.35) 45%,
+      transparent 75%
+    ) !important;
+}
+
+.plate__h,
+.plate__lede {
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.95),
+    0 4px 24px rgba(0, 0, 0, 0.65);
+}
+
