@@ -418,7 +418,6 @@ export default function ScrollSequence({
       ref={wrapRef}
       className="seq"
       style={{
-        // INLINE height — nothing in globals.css can override this
         height: `${pin * 100}svh`,
         position: "relative",
         margin: 0,
@@ -449,10 +448,10 @@ export default function ScrollSequence({
           </div>
         )}
 
-        {fault && (
+        {fault && process.env.NODE_ENV !== "production" && (
           <div className="seq__fault mono" role="status">
             <span>Sequence unavailable</span>
-            {process.env.NODE_ENV !== "production" && <span>{fault}</span>}
+            <span>{fault}</span>
           </div>
         )}
       </div>

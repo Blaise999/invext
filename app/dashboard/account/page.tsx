@@ -81,7 +81,7 @@ export default async function Account() {
           <div className="panel panel--quiet">
             <p className="mono panel__note">
               Funding settles through a licensed provider to a titled custody
-              account. We never accept crypto transfer, Zelle, CashApp or gift
+              account. We never accept wire transfers, Zelle, CashApp or gift
               cards, and never ask for your sign-in code.
             </p>
           </div>

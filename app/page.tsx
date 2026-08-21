@@ -11,14 +11,15 @@ import Leadership from "@/components/Leadership";
 import NewsRoom from "@/components/NewsRoom";
 import VideoWall from "@/components/VideoWall";
 import TreatyDesk from "@/components/TreatyDesk";
+import PrivateMarkBar from "@/components/PrivateMarkBar";
+import ReadingProgress from "@/components/ReadingProgress";
 
 import { getQuotes, privateCos, faqs } from "@/lib/data";
 import { nasaClips, nasaGallery, sampleQueries, subjectPool } from "@/lib/media";
 import { NEWS, WIKI_SUBJECTS, placeImages } from "@/lib/newsroom";
 import { company, FACTS_AS_OF } from "@/lib/facts";
 import { marksFor } from "@/lib/ledger";
-import { orPrivateMarks, privateMarksEnabled, PRIVATE_MARK_DISCLAIMER } from "@/lib/preview";
-import ReadingProgress from "@/components/ReadingProgress";
+import { orPrivateMarks, privateMarksEnabled } from "@/lib/preview";
 
 export const revalidate = 300;
 
@@ -67,12 +68,7 @@ export default async function Page() {
     <>
       <ReadingProgress />
 
-      {privateMarksEnabled() && hasPrivateMarks && (
-        <div className="pvbar" role="status">
-          <span className="mono pvbar__tag">Private</span>
-          <p className="pvbar__copy">{PRIVATE_MARK_DISCLAIMER}</p>
-        </div>
-      )}
+      {privateMarksEnabled() && hasPrivateMarks && <PrivateMarkBar />}
 
       <Hero />
       <Ticker quotes={quotes} />

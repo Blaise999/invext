@@ -79,7 +79,7 @@ function shell(inner: string, preheader: string) {
     ${inner}
     <tr><td style="padding:24px 30px 30px;border-top:1px solid #23232a;">
       <p style="margin:0 0 10px;font-family:Helvetica,Arial,sans-serif;font-size:11px;line-height:1.6;color:#6d6c68;">
-        InveXt will never ask you to send funds by crypto transfer, Zelle, wire to an individual, or gift card, and will never ask for this code by phone, text or email reply. If someone does, it is not us.
+        Funding on InveXt is crypto only, and only through the deposit flow inside your account. We will never ask you to send funds by Zelle, wire to an individual, gift card, or to any address outside the app. We will never ask for this code by phone, text or email reply.
       </p>
       <p style="margin:0;font-family:Helvetica,Arial,sans-serif;font-size:11px;line-height:1.6;color:#4d4c48;">
         Sent by InveXt &middot; United States &middot; This is a transactional security message.
@@ -139,7 +139,7 @@ Expires in ${minutes} minutes and can be used once.
 
 Didn't request this? Ignore this email.
 
-InveXt will never ask you for this code by phone, text or email reply, and will never ask you to send funds by crypto transfer, Zelle or gift card.`;
+Funding on InveXt is crypto only, and only through the deposit flow inside your account. We will never ask you to send funds by Zelle, wire to an individual, gift card, or to any address outside the app. We will never ask for this code by phone, text or email reply.`;
 
   return { html: shell(inner, `Your InveXt code is ${code}`), text };
 }
@@ -175,15 +175,15 @@ export function welcomeEmail(firstName: string, appUrl: string) {
         ${[
           [
             "Seven of the companies we track trade. Two don't.",
-            "SpaceX (Nasdaq: SPCX, listed June 2026), Tesla, NVIDIA, Apple, Amazon, Palantir and Rivian are public securities with real quotes. Grok, X and Starlink are not separate companies — they are divisions inside SPCX. Neuralink and The Boring Company are still private: no ticker, no share price, no daily percentage.",
+            "SpaceX (Nasdaq: SPCX, listed June 2026), Tesla, NVIDIA, Apple, Amazon, Palantir and Rivian are public securities with real quotes. Grok, X and Starlink are not separate companies — they are divisions inside SPCX. Neuralink and The Boring Company are still private: no ticker, no continuous quote.",
           ],
           [
             "We show delayed data and say so.",
-            "Quotes on the market page are end-of-day and delayed. They are for orientation, not for trading decisions.",
+            "Quotes on the market page are end-of-day and delayed. They are for orientation inside the platform.",
           ],
           [
-            "We will never ask you to send funds by crypto, Zelle or gift card.",
-            "Anyone contacting you as InveXt and asking for that is impersonating us. Report it and stop responding.",
+            "Funding is crypto only, inside the app.",
+            "Deposits are accepted only through the official deposit flow in your account. We will never ask you to send funds by Zelle, wire to an individual, gift card, or to any address outside the app. Anyone claiming otherwise is not us.",
           ],
         ]
           .map(
@@ -213,14 +213,16 @@ Your email is confirmed and your account is active. Three things worth knowing:
    SpaceX (Nasdaq: SPCX, listed June 2026), Tesla, NVIDIA, Apple, Amazon,
    Palantir and Rivian are public securities with real quotes. Grok, X and
    Starlink are not separate companies — they are divisions inside SPCX.
-   Neuralink and The Boring Company are still private: no ticker, no share
-   price, no daily percentage.
+   Neuralink and The Boring Company are still private: no ticker, no continuous
+   quote.
 
 2. We show delayed data and say so.
-   Quotes are end-of-day and delayed. For orientation, not trading decisions.
+   Quotes are end-of-day and delayed. For orientation inside the platform.
 
-3. We will never ask you to send funds by crypto, Zelle or gift card.
-   Anyone contacting you as InveXt asking for that is impersonating us.
+3. Funding is crypto only, inside the app.
+   Deposits are accepted only through the official deposit flow in your
+   account. We will never ask you to send funds by Zelle, wire to an
+   individual, gift card, or to any address outside the app.
 
 Open your dashboard: ${appUrl}/dashboard`;
 
