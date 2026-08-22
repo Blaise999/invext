@@ -8,7 +8,7 @@ import Greeting from "@/components/dash/Greeting";
 import Logo from "@/components/dash/Logo";
 
 export const runtime = "nodejs";
-export cont dynamic = "force-dynamic";
+export const dynamic = "force-dynamic";
 
 /**
  * Home.

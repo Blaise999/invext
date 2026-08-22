@@ -107,7 +107,7 @@ export default function TradeTicket({
         <div className={`tkt__celebrate is-${success}`}>
           <div className="tkt__burst" />
           <div className="tkt__check">
-            <svg viewBox="0 0 24 24" width="48" height="48">
+            <svg viewBox="0 0 24 24" width="48" height="48" aria-hidden>
               <path
                 d="M5 13l4 4L19 7"
                 fill="none"
@@ -131,11 +131,14 @@ export default function TradeTicket({
         </div>
       )}
 
-      {/* ───── Side toggle ───── */}
-      <div className="tkt__side">
+      {/* ───── Side toggle — equal-width grid ───── */}
+      <div className="tkt__side" role="tablist">
         {(["buy", "sell"] as const).map((s) => (
           <button
             key={s}
+            type="button"
+            role="tab"
+            aria-selected={side === s}
             className={side === s ? `tkt__sb is-on is-${s}` : "tkt__sb"}
             onClick={() => {
               setSide(s);
@@ -148,10 +151,11 @@ export default function TradeTicket({
       </div>
 
       {/* ───── Mode toggle ───── */}
-      <div className="tkt__mode">
+      <div className="tkt__mode" role="group" aria-label="Amount unit">
         {(["shares", "dollars"] as const).map((m) => (
           <button
             key={m}
+            type="button"
             className={mode === m ? "tkt__mb is-on" : "tkt__mb"}
             onClick={() => {
               setMode(m);
@@ -178,6 +182,7 @@ export default function TradeTicket({
               setRaw(e.target.value.replace(/[^\d.]/g, ""))
             }
             autoComplete="off"
+            aria-label={mode === "shares" ? "Quantity" : "Amount in dollars"}
           />
         </div>
       </label>
@@ -219,6 +224,7 @@ export default function TradeTicket({
 
       {/* ───── Main button ───── */}
       <button
+        type="button"
         className={`tkt__go is-${side} ${busy ? "is-busy" : ""}`}
         disabled={invalid || busy}
         onClick={submit}
