@@ -1,5 +1,6 @@
 import { loadViewer } from "@/lib/viewer";
 import { US_STATES } from "@/lib/validate";
+import LogoutButton from "@/components/auth/LogoutButton"; // adjust path if needed
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,9 +17,12 @@ export default async function Account() {
           <h1 className="page__h">Account</h1>
           <p className="page__sub">Identity, security and active sessions.</p>
         </div>
-        <span className="mono page__meta">
-          {v.sessions.length} session{v.sessions.length === 1 ? "" : "s"}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="mono page__meta">
+            {v.sessions.length} session{v.sessions.length === 1 ? "" : "s"}
+          </span>
+          <LogoutButton />
+        </div>
       </div>
 
       <div className="split">
@@ -29,11 +33,16 @@ export default async function Account() {
           <dl className="dspecs">
             <div>
               <dt>Name</dt>
-              <dd>{v.user.first_name} {v.user.last_name}</dd>
+              <dd>
+                {v.user.first_name} {v.user.last_name}
+              </dd>
             </div>
             <div>
               <dt>Email</dt>
-              <dd>{v.user.email} <span className="chip chip--ok">Verified</span></dd>
+              <dd>
+                {v.user.email}{" "}
+                <span className="chip chip--ok">Verified</span>
+              </dd>
             </div>
             <div>
               <dt>Residence</dt>
@@ -41,19 +50,26 @@ export default async function Account() {
             </div>
             <div>
               <dt>Two-step verification</dt>
-              <dd><span className="chip chip--ok">On</span> Required at every sign-in.</dd>
+              <dd>
+                <span className="chip chip--ok">On</span> Required at every
+                sign-in.
+              </dd>
             </div>
             <div>
               <dt>Opened</dt>
               <dd className="mono">
                 {new Date(v.user.created_at).toLocaleDateString("en-US", {
-                  year: "numeric", month: "long", day: "numeric",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
                 })}
               </dd>
             </div>
             <div>
               <dt>Funding</dt>
-              <dd><span className="chip">Not connected</span></dd>
+              <dd>
+                <span className="chip">Not connected</span>
+              </dd>
             </div>
           </dl>
         </section>
@@ -67,10 +83,13 @@ export default async function Account() {
             <ul className="mini2">
               {v.sessions.map((s) => (
                 <li key={s.id}>
-                  <span className="mini2__n">{s.user_agent ?? "Unknown device"}</span>
+                  <span className="mini2__n">
+                    {s.user_agent ?? "Unknown device"}
+                  </span>
                   <span className="mono mini2__v">
                     {new Date(s.created_at).toLocaleDateString("en-US", {
-                      month: "short", day: "numeric",
+                      month: "short",
+                      day: "numeric",
                     })}
                   </span>
                 </li>
